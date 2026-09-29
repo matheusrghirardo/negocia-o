@@ -170,6 +170,7 @@ function wireLessons() {
   $('bLes').onclick = e => { e.stopPropagation(); const open = $('mLes').hidden; closeMenus(); $('mLes').hidden = !open; $('bLes').setAttribute('aria-expanded', String(open)); };
   $('mLes').onclick = e => { const b = e.target.closest('button[data-les]'); if (!b) return; closeMenus(); startLesson(b.dataset.les); showFocus(); };
   $('lesGrid').onclick = e => { const b = e.target.closest('button[data-les]'); if (!b) return; startLesson(b.dataset.les); markTab('grafico'); goSection('colCenter', true); };
+  $('lesTabs').onclick = e => { const b = e.target.closest('button[data-g]'); if (!b || b.classList.contains('on')) return; UI.lesGrp = b.dataset.g; renderLessons(); };
   $('lesson').addEventListener('click', e => {
     const b = e.target.closest('[data-ls]');
     if (!b) { if (UI.mobile && e.target.closest('.ls-head')) { LS.min = !LS.min; lesRender(); } return; }

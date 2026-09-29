@@ -528,7 +528,10 @@ function renderLessons() {
     `<div class="les-top"><span class="les-n">Aula ${LESSONS.indexOf(l) + 1}</span>${ok ? '<span class="les-ok">✓ Concluída</span>' : ''}</div>` +
     `<h3>${l.title}</h3><p class="les-sub">${l.sub}</p><p class="les-goal"><b>Você vai ver</b> ${l.goal}</p>` +
     `<div class="les-foot"><button class="btn" data-les="${l.id}">${ok ? 'Refazer' : 'Começar aula'}</button><span class="les-meta">${l.steps.length} etapas, com teste no fim</span></div></article>`; };
-  $('lesGrid').innerHTML = Object.keys(LES_GRP).map(g => `<h3 class="grp-t">${LES_GRP[g].t}</h3><p class="grp-d">${LES_GRP[g].d}</p><div class="les-grid">${LESSONS.filter(l => l.grp === g).map(card).join('')}</div>`).join('');
+  const groups = Object.keys(LES_GRP);
+  if (!UI.lesGrp || groups.indexOf(UI.lesGrp) === -1) UI.lesGrp = groups[0];
+  $('lesTabs').innerHTML = groups.map(g => `<button data-g="${g}" role="tab" aria-selected="${g === UI.lesGrp}" class="${g === UI.lesGrp ? 'on' : ''}">${LES_GRP[g].t}</button>`).join('');
+  $('lesGrid').innerHTML = groups.map(g => `<div class="les-pane" data-g="${g}"${g === UI.lesGrp ? '' : ' hidden'}><p class="grp-d">${LES_GRP[g].d}</p><div class="les-grid">${LESSONS.filter(l => l.grp === g).map(card).join('')}</div></div>`).join('');
 }
 
 /* ----------------------------- guia de opções: textos do simulador, exemplos e laboratório ----------------------------- */
@@ -1015,7 +1018,34 @@ function newSession(seed, opts) {
 /* ----------------------------- página: rolagem até as seções e partes à vista ----------------------------- */
 const TAB_SEC = { mercado: 'colMap', grafico: 'colCenter', livro: 'colRight', eventos: 'bottom' };
 function barBottom() { const r = $('bar').getBoundingClientRect(); return Math.max(0, r.bottom); }
-function markTab(t) { UI.tab = t; document.body.dataset.tab = t; for (const b of $('mtabs').children) b.classList.toggle('on', b.dataset.t === t); }
+function markTab(t) {
+  UI.tab = t; document.body.dataset.tab = t;
+  for (const b of $('mtabs').children) b.classList.toggle('on', b.dataset.t === t);
+  for (const b of $('segCompact').children) b.classList.toggle('on', b.dataset.v === t);
+  applyCompact();
+}
+/* ----------------------------- modo compacto (desktop): um painel do simulador por vez -----------------------------
+   Opcional (fica salvo neste navegador). Reaproveita o mesmo UI.tab que já existe para o rodapé do celular. */
+const COMPACT_KEY = 'b3tuneis.compacto';
+function readCompact() { try { return localStorage.getItem(COMPACT_KEY) === '1'; } catch (e) { return false; } }
+function applyCompact() {
+  const on = UI.compact, t = UI.tab;
+  $('colMap').hidden = on && t !== 'mercado';
+  $('focusGrid').hidden = on && t !== 'grafico' && t !== 'livro';
+  $('focusGrid').classList.toggle('solo', on && (t === 'grafico' || t === 'livro'));
+  $('colCenter').hidden = on && t === 'livro';
+  $('colRight').hidden = on && t === 'grafico';
+  $('eventsGrid').hidden = on && t !== 'eventos';
+}
+function setCompact(on) {
+  UI.compact = on;
+  try { localStorage.setItem(COMPACT_KEY, on ? '1' : '0'); } catch (e) { /* sem armazenamento: vale só nesta visita */ }
+  $('bCompact').setAttribute('aria-pressed', String(on));
+  $('bCompact').classList.toggle('primary', on);
+  $('bCompact').textContent = on ? 'Ver tudo' : 'Modo compacto';
+  $('segCompact').hidden = !on;
+  applyCompact();
+}
 /* rola até a seção; sem 'force', não mexe se o topo dela já estiver na metade de cima da tela */
 function goSection(id, force) {
   const el = $(id); if (!el) return;
@@ -1051,7 +1081,7 @@ function pageTick() {
   const s = $('simulador').getBoundingClientRect(), inSim = s.top < vh * 0.6 && s.bottom > vh * 0.4;
   document.body.classList.toggle('in-sim', inSim);
   if (inSim && !UI.tourAsked) { UI.tourAsked = true; maybeTour(); }
-  if (UI.mobile) { // atalhos do rodapé acompanham a seção à vista
+  if (UI.mobile && !UI.compact) { // atalhos do rodapé acompanham a seção à vista; no modo compacto só o clique manda
     const y = vh * 0.4, top = barBottom(); let cur = null;
     for (const t in TAB_SEC) { const r = $(TAB_SEC[t]).getBoundingClientRect(); if (r.top <= y && r.bottom > top + 40) cur = t; }
     if (cur && cur !== UI.tab) markTab(cur);
@@ -1077,6 +1107,8 @@ function wire() {
   $('bSkip').onclick = () => exitLesson() || jumpTo(UI.E.T.open, 'Pulando para 10:00…', () => showToast('10:00: fim do call de abertura. Quem teve alteração no último minuto ou teórico fora da proteção foi prorrogado.', 7000));
   $('bNew').onclick = () => { exitLesson(); newSession(rndSeed()); };
   $('bLegend').onclick = () => openPage('como-funciona');
+  $('bCompact').onclick = () => setCompact(!UI.compact);
+  for (const b of $('segCompact').children) b.onclick = () => setTab(b.dataset.v);
   // links internos (cabeçalho, abertura): abre a página certa (se for o caso) e rola até a seção
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href^="#"]'); if (!a) return;
@@ -1161,6 +1193,7 @@ function init() {
   try { new ResizeObserver(syncPadT).observe($('chartLegend')); } catch (e) { /* ok */ }
   buildScenMenu(); wire(); wireLessons(); setSpeed('normal'); setZoomButtons();
   for (const x of $('segInt').children) x.classList.toggle('on', x.dataset.v === UI.intensity);
+  setCompact(readCompact());
   markTab('grafico');
   renderGuide(); renderLessons();
   setText('heroFacts', `${CONFIG.instruments.length} ativos fictícios · ${LESSONS.length} aulas guiadas · ${SCEN.filter(s => s !== '-').length} cenários prontos`);

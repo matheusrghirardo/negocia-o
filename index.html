@@ -128,6 +128,8 @@
         <button class="btn" id="bSkip"><i data-lucide="skip-forward"></i>Pular para 10:00</button>
         <button class="btn" id="bNew"><i data-lucide="rotate-ccw"></i>Novo pregão</button>
         <button class="btn" id="bLegend"><i data-lucide="book-open"></i>Legenda</button>
+        <button class="btn" id="bCompact" aria-pressed="false">Modo compacto</button>
+        <div class="seg" id="segCompact" role="group" aria-label="Painel em foco" hidden><button data-v="mercado">Mercado</button><button data-v="grafico">Gráfico</button><button data-v="livro">Livro</button><button data-v="eventos">Eventos</button></div>
       </div>
 
       <section class="card board" id="colMap" aria-labelledby="hMap">
@@ -146,7 +148,7 @@
         </div>
       </section>
 
-      <div class="focus-grid">
+      <div class="focus-grid" id="focusGrid">
         <section class="card focus" id="colCenter" aria-label="Ativo em foco">
           <div class="focus-head" id="focusHead">
             <div class="fh-id"><span class="fh-tk" id="fhTk">PETR4</span><span class="fh-name" id="fhName"></span></div>
@@ -209,7 +211,7 @@
         </div>
       </div>
 
-      <div class="events-grid">
+      <div class="events-grid" id="eventsGrid">
         <section class="card bottom" id="bottom" aria-label="Eventos do pregão">
           <div class="btabs" id="btabs">
             <button data-v="feed" class="on">Feed de eventos</button>
@@ -235,6 +237,7 @@
       <h2 class="page-h2" id="hAulas">Aulas guiadas</h2>
       <p class="sec-lead">Micro-cenários com roteiro fixo, em três trilhas. O pregão pausa em cada etapa e explica, com os números da hora, o que aconteceu e por quê. Cada aula termina com um resumo e um teste rápido, e as concluídas ficam marcadas neste navegador.</p>
     </div>
+    <div class="les-tabs" id="lesTabs" role="tablist" aria-label="Trilha de aulas"></div>
     <div id="lesGrid"></div>
   </section>
 
