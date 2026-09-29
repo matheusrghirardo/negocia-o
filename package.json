@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Simulador educativo dos túneis de negociação da B3, com aulas guiadas e guia ilustrado de opções. Dados fictícios.",
+  "author": "Matheus Ghirardo",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

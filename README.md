@@ -4,6 +4,8 @@ Site de estudo, de página única, que roda no seu computador. Um pregão simula
 
 Projeto educativo independente, sem vínculo com a B3. Ativos, preços e corretoras são fictícios; os parâmetros são aproximações didáticas das regras públicas.
 
+Feito por **Matheus Ghirardo** para fins de estudo.
+
 ## Como abrir
 
 - **Dois cliques em `iniciar.bat`.** Na primeira vez ele instala as dependências; depois sobe o servidor e abre http://localhost:5173 no navegador. Para parar, feche a janela preta.

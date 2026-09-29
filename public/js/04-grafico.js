@@ -10,6 +10,7 @@ const LOCK = '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true" s
 const UI = {
   E: null, seed: 0, focus: null, speed: 'normal', paused: false, slowmo: true, slowActive: false,
   intensity: 'normal', tab: 'grafico', mapView: 'blocos', feedFilter: 'todos', btab: 'feed', mobile: false, compact: false, lesGrp: null,
+  matchFlash: [], bookTtSeen: 0, bookTtTicker: null,
   chart: { zoom: 300, day: false, live: true, viewEnd: 0, full: false, ymin: NaN, ymax: NaN, yTk: null, hover: null, drag: null,
     margin: null, pw: 1, span: 300, t0: 0, t1: 0, padT: 34, show: { ult: true, med: true, est: true, rej: true, prot: true } },
   pal: {}, patterns: {}, reduced: false, ff: null, lastFeedId: 0, sparks: [], parts: [], lights: {},
