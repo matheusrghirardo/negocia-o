@@ -2,9 +2,14 @@
 
 Site de estudo, de página única, que roda no seu computador. Um pregão simulado mostra, ao vivo, quando uma oferta é recusada pelo túnel de rejeição, quando um negócio vira leilão e por que um leilão é prorrogado. Traz 11 aulas guiadas com resumo e teste rápido, um guia dos túneis e um guia ilustrado de opções com laboratório de Black-Scholes.
 
+**Autor: Matheus Ghirardo.** Criado como projeto de estudo sobre o funcionamento do pregão da B3.
+
 Projeto educativo independente, sem vínculo com a B3. Ativos, preços e corretoras são fictícios; os parâmetros são aproximações didáticas das regras públicas.
 
-Feito por **Matheus Ghirardo** para fins de estudo.
+## Fontes
+
+- **B3** ([b3.com.br](https://www.b3.com.br)): materiais públicos sobre túneis de negociação (rejeição, leilão e proteção), leilões, prorrogações, circuit breaker e opções, usados como base das regras simuladas. Confira sempre a versão oficial vigente.
+- **Ilustrações**: os diagramas e gráficos do site são desenhos próprios, feitos em código (SVG e canvas) para representar esses conceitos. O projeto não reproduz imagens da B3.
 
 ## Como abrir
 
@@ -49,7 +54,9 @@ Os arquivos de `public/js` são scripts clássicos: carregam em ordem, com `defe
 
 ## Bibliotecas
 
-- [Vite](https://vite.dev): servidor de desenvolvimento e build
-- [Geist e Geist Mono](https://vercel.com/font), via Fontsource: fontes instaladas localmente
-- [Lucide](https://lucide.dev): ícones
-- [KaTeX](https://katex.org): fórmulas do modelo de Black-Scholes
+Todas de código aberto:
+
+- [Vite](https://vite.dev) (MIT): servidor de desenvolvimento e build
+- [Geist e Geist Mono](https://vercel.com/font) (SIL Open Font License 1.1), via Fontsource: fontes instaladas localmente
+- [Lucide](https://lucide.dev) (ISC): ícones
+- [KaTeX](https://katex.org) (MIT): fórmulas do modelo de Black-Scholes
