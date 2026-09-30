@@ -258,7 +258,7 @@ function fillLimits(i) {
 }
 
 /* ----------------------------- livro ----------------------------- */
-/* negócios recentes do ativo em foco: guarda preço/lado/quantidade por ~900ms, pra dar um lampejo na
+/* negócios recentes do ativo em foco: guarda preço/lado/quantidade por ~1,3s, pra dar um lampejo forte na
    linha quando o nível continua no livro, ou uma linha passageira quando o negócio zerou o nível. */
 function pollMatchFlash(i) {
   const now = performance.now();
@@ -266,7 +266,7 @@ function pollMatchFlash(i) {
   if (UI.bookTtSeen > i.tt.length) UI.bookTtSeen = i.tt.length; // a fita foi podada (ttPush corta o início de tempos em tempos)
   let novos = i.tt.slice(UI.bookTtSeen); UI.bookTtSeen = i.tt.length;
   if (novos.length > 8) novos = novos.slice(-8); // rajada grande (turbo ou "pular para 10:00"): só os mais recentes valem lampejo
-  for (const x of novos) if (!x.auc) UI.matchFlash.push({ side: x.ag > 0 ? -1 : 1, p: x.p, q: x.q, until: now + 900 });
+  for (const x of novos) if (!x.auc) UI.matchFlash.push({ side: x.ag > 0 ? -1 : 1, p: x.p, q: x.q, until: now + 1300 });
   if (UI.matchFlash.length) UI.matchFlash = UI.matchFlash.filter(f => f.until > now);
 }
 function updateBook() {

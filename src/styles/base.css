@@ -312,16 +312,16 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none}
 .br.out .bp::after{content:" fora";font-size:10px;font-weight:500;color:var(--faint)}
 .br .lock{color:var(--amber);font-size:11px;margin-right:2px}
 /* negócio saindo naquele nível: um lampejo na linha (parcial) ou uma linha passageira (nível zerou) */
-@keyframes brMatchUp{0%{background-color:color-mix(in srgb,var(--up) 42%,transparent)}100%{background-color:transparent}}
-@keyframes brMatchDown{0%{background-color:color-mix(in srgb,var(--down) 42%,transparent)}100%{background-color:transparent}}
-.br.match.b{animation:brMatchUp .8s ease-out}
-.br.match.a{animation:brMatchDown .8s ease-out}
+@keyframes brMatchUp{0%,20%{background-color:color-mix(in srgb,var(--up) 65%,transparent)}100%{background-color:transparent}}
+@keyframes brMatchDown{0%,20%{background-color:color-mix(in srgb,var(--down) 65%,transparent)}100%{background-color:transparent}}
+.br.match.b{animation:brMatchUp 1.3s ease-out}
+.br.match.a{animation:brMatchDown 1.3s ease-out}
 .bmk{font-size:11px;padding:1px 14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .bmk::before,.bmk::after{content:"";flex:1;border-top:1px dashed currentColor;opacity:.7}
 .bmk.amb{color:var(--amber)} .bmk.rsp{color:var(--rasp)} .bmk.theo{color:var(--amber);font-weight:600}
 .bmk.theo::before,.bmk.theo::after{border-top-style:solid}
-@keyframes bmkGone{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
-.bmk.gone{animation:bmkGone .9s ease-in forwards;font-weight:500}
+@keyframes bmkGone{0%,75%{opacity:1}100%{opacity:0}}
+.bmk.gone{animation:bmkGone 1.3s ease-in forwards;font-weight:600}
 .bmk.gone.b{color:var(--up)} .bmk.gone.a{color:var(--down)}
 .spread{font-size:11px;color:var(--faint);text-align:center;padding:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:2px 0}
 .bk-empty{color:var(--faint);font-size:12px;padding:8px 14px}
