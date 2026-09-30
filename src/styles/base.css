@@ -300,33 +300,54 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none}
 #secBook{padding-bottom:10px}
 .bk-cols,.br{display:grid;grid-template-columns:minmax(0,1fr) 26px 72px 64px;gap:6px;padding:0 14px;align-items:center}
 .bk-cols{font-size:11px;color:var(--faint);padding-bottom:3px}
+.bk-cols span[title]{cursor:help}
 .bk-cols span,.br span{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bk-cols span:first-child,.br span:first-child{text-align:left}
-.br{position:relative;height:19px;font-size:13px;line-height:19px}
-.br::before{content:"";position:absolute;right:0;top:1px;bottom:1px;width:var(--d,0%);opacity:.16;border-radius:2px 0 0 2px}
-.br.a::before{background:var(--down)} .br.b::before{background:var(--up)}
-.br .bp{font-weight:600}
-.br.a .bp{color:var(--down)} .br.b .bp{color:var(--up)}
+/* linha do livro: --sc é a cor do lado (verde compra, vermelho venda); fundo, barra e realce ficam atrás do texto */
+.br{position:relative;isolation:isolate;height:20px;font-size:13px;line-height:20px;--sc:var(--up)}
+.br.a{--sc:var(--down)}
+.br::before{content:"";position:absolute;z-index:-1;right:0;top:1px;bottom:1px;width:var(--d,0%);background:var(--sc);opacity:.16;border-radius:2px 0 0 2px}
+.br .bp{font-weight:600;color:var(--sc)}
 .br .bk{color:var(--muted);font-size:12px}
+.br.lv{cursor:pointer}
+.br.lv:hover{background-color:var(--panel2)}
+.br.lv:hover .bp{text-decoration:underline;text-underline-offset:2px}
+.br.best span:nth-child(3),.br.best .bp{font-weight:700}
+.br.best .bk{color:var(--text)}
 .br.exe{background:var(--amberA)}
 .br.own .bk{color:var(--accent);font-weight:600}
 .br.out{opacity:.5}
 .br.out .bp::after{content:" fora";font-size:10px;font-weight:500;color:var(--faint)}
 .br .lock{color:var(--amber);font-size:11px;margin-right:2px}
-/* negócio saindo naquele nível: um lampejo na linha (parcial) ou uma linha passageira (nível zerou) */
-@keyframes brMatchUp{0%,20%{background-color:color-mix(in srgb,var(--up) 65%,transparent)}100%{background-color:transparent}}
-@keyframes brMatchDown{0%,20%{background-color:color-mix(in srgb,var(--down) 65%,transparent)}100%{background-color:transparent}}
-.br.match.b{animation:brMatchUp 1.3s ease-out}
-.br.match.a{animation:brMatchDown 1.3s ease-out}
+/* negócio saindo no preço: realce que se apaga (--hit vai de 1 a 0, calculado a cada atualização) e a quantidade negociada */
+.br.hit::after,.br.gone::after{content:"";position:absolute;z-index:-1;inset:0;background:var(--sc);opacity:calc(var(--hit,0) * .3)}
+.br.hit,.br.gone{box-shadow:inset 3px 0 0 var(--sc)}
+.tq{display:inline-block;margin-right:5px;padding:0 4px;border-radius:4px;font:700 11px/15px var(--sans);color:var(--onacc);background:var(--sc);vertical-align:1px}
+.br.gone{opacity:calc(.3 + var(--hit,0) * .7)}
+.br.gone .bk{color:var(--text);font-weight:600}
+.br.gone .bp{text-decoration:line-through}
 .bmk{font-size:11px;padding:1px 14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .bmk::before,.bmk::after{content:"";flex:1;border-top:1px dashed currentColor;opacity:.7}
 .bmk.amb{color:var(--amber)} .bmk.rsp{color:var(--rasp)} .bmk.theo{color:var(--amber);font-weight:600}
 .bmk.theo::before,.bmk.theo::after{border-top-style:solid}
-@keyframes bmkGone{0%,75%{opacity:1}100%{opacity:0}}
-.bmk.gone{animation:bmkGone 1.3s ease-in forwards;font-weight:600}
-.bmk.gone.b{color:var(--up)} .bmk.gone.a{color:var(--down)}
 .spread{font-size:11px;color:var(--faint);text-align:center;padding:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:2px 0}
+/* rótulos dos lados, meio do livro (spread, último negócio, pressão) e legenda */
+.bk-side{display:flex;justify-content:space-between;align-items:baseline;padding:4px 14px 3px;font:700 10.5px/1.2 var(--prose);letter-spacing:.08em;text-transform:uppercase;cursor:help}
+.bk-side.a{color:var(--down)} .bk-side.b{color:var(--up)}
+.bk-side small{font:500 11px/1.2 var(--sans);letter-spacing:0;text-transform:none;color:var(--muted)}
+.bk-mid{padding:5px 14px 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:3px 0}
+.bk-mid-r{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;color:var(--faint)}
+.bk-last{font:600 13px/1.2 var(--sans);color:var(--muted);cursor:help}
+.bk-last.up{color:var(--up)} .bk-last.down{color:var(--down)}
+.bk-press{display:flex;height:4px;margin-top:5px;border-radius:2px;overflow:hidden;background:color-mix(in srgb,var(--down) 55%,transparent);cursor:help}
+.bk-press i{display:block;height:100%;background:color-mix(in srgb,var(--up) 75%,transparent)}
+.bk-foot{display:flex;flex-wrap:wrap;gap:2px 12px;margin:10px 14px 0;font-size:11.5px;line-height:1.55;color:var(--faint)}
+.bk-foot .it{white-space:nowrap}
+.bk-foot .tq{background:var(--down)}
+.bk-foot s{color:var(--muted)}
 .bk-empty{color:var(--faint);font-size:12px;padding:8px 14px}
+@keyframes bolPick{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+.fld input.pick{animation:bolPick .9s ease-out}
 .bol{padding:12px 14px 14px}
 .bol-row{display:flex;gap:6px;margin-bottom:8px;align-items:center}
 .bol-side{display:grid;grid-template-columns:1fr 1fr;border-radius:7px;overflow:hidden;border:1px solid var(--line2);flex:1;height:32px}

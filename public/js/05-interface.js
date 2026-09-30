@@ -258,59 +258,93 @@ function fillLimits(i) {
 }
 
 /* ----------------------------- livro ----------------------------- */
-/* negócios recentes do ativo em foco: guarda preço/lado/quantidade por ~1,3s, pra dar um lampejo forte na
-   linha quando o nível continua no livro, ou uma linha passageira quando o negócio zerou o nível. */
+/* negócios recentes do ativo em foco (lado passivo, preço, quantidade), guardados por HIT_MS. No livro, o preço
+   onde saiu negócio ganha um realce que se apaga aos poucos e a quantidade negociada (−qtd); se o preço zerou,
+   a linha fica no lugar, riscada, até sumir. */
+const HIT_MS = 1300;
 function pollMatchFlash(i) {
   const now = performance.now();
   if (UI.bookTtTicker !== i.ticker) { UI.bookTtTicker = i.ticker; UI.bookTtSeen = i.tt.length; UI.matchFlash = []; return; }
   if (UI.bookTtSeen > i.tt.length) UI.bookTtSeen = i.tt.length; // a fita foi podada (ttPush corta o início de tempos em tempos)
   let novos = i.tt.slice(UI.bookTtSeen); UI.bookTtSeen = i.tt.length;
-  if (novos.length > 8) novos = novos.slice(-8); // rajada grande (turbo ou "pular para 10:00"): só os mais recentes valem lampejo
-  for (const x of novos) if (!x.auc) UI.matchFlash.push({ side: x.ag > 0 ? -1 : 1, p: x.p, q: x.q, until: now + 1300 });
+  if (novos.length > 8) novos = novos.slice(-8); // rajada grande (turbo ou "pular para 10:00"): só os mais recentes contam
+  for (const x of novos) if (!x.auc) UI.matchFlash.push({ side: x.ag > 0 ? -1 : 1, p: x.p, q: x.q, until: now + HIT_MS });
   if (UI.matchFlash.length) UI.matchFlash = UI.matchFlash.filter(f => f.until > now);
 }
+function bookHits() {
+  const now = performance.now(), hits = new Map();
+  for (const f of UI.matchFlash) {
+    const k = f.side + '|' + f.p, h = hits.get(k), v = Math.max(0, (f.until - now) / HIT_MS);
+    if (h) { h.q += f.q; h.v = Math.max(h.v, v); } else hits.set(k, { side: f.side, p: f.p, q: f.q, v });
+  }
+  return hits;
+}
 function updateBook() {
-  const i = UI.focus, a = i.auction, inA = inAuctionLike(i), t = i.tun, L = 10;
+  const i = UI.focus, a = i.auction, inA = inAuctionLike(i), t = i.tun, L = 10, U = unitQ(i);
   pollMatchFlash(i);
-  const asks = i.asks.slice(0, L), bids = i.bids.slice(0, L);
-  let maxQ = 1; for (const l of asks) if (l.qty > maxQ) maxQ = l.qty; for (const l of bids) if (l.qty > maxQ) maxQ = l.qty;
-  const theo = inA ? a.theo : null, ult = i.state === ST.CONT ? t.ult : null;
-  const flashed = (p, side) => UI.matchFlash.some(f => f.side === side && Math.abs(f.p - p) < 1e-9);
+  const hits = inA ? new Map() : bookHits();
+  const theo = inA ? a.theo : null, ult = i.state === ST.CONT ? t.ult : null, bestA = i.ba(), bestB = i.bb();
+  // cada lado: os L melhores preços, mais os preços que acabaram de zerar (ficam no lugar até o realce apagar,
+  // a não ser que o outro lado já ocupe aquele preço: aí o livro pareceria cruzado)
+  const sideRows = (levels, side) => {
+    const rows = levels.slice(0, L).map(l => ({ p: l.p, l }));
+    for (const h of hits.values()) {
+      if (h.side !== side || levels.some(l => l.p === h.p)) continue;
+      if (side > 0 ? (bestA != null && h.p >= bestA) : (bestB != null && h.p <= bestB)) continue;
+      rows.push({ p: h.p, gone: h });
+    }
+    rows.sort((x, y) => side > 0 ? y.p - x.p : x.p - y.p);
+    return rows.slice(0, L);
+  };
+  const askRows = sideRows(i.asks, -1), bidRows = sideRows(i.bids, 1);
+  const N = Math.max(5, askRows.length, bidRows.length); // mesmo número de linhas nos dois lados: o meio não pula
+  let maxQ = 1, askTot = 0, bidTot = 0;
+  for (const r of askRows) if (r.l) { maxQ = Math.max(maxQ, r.l.qty); askTot += r.l.qty; }
+  for (const r of bidRows) if (r.l) { maxQ = Math.max(maxQ, r.l.qty); bidTot += r.l.qty; }
   const rowHTML = (l, side) => {
     let top = '', tq = 0, own = false; const m = {};
     for (const o of l.orders) { const k = o.own ? 'Você' : o.br; m[k] = (m[k] || 0) + o.rem; if (m[k] > tq) { tq = m[k]; top = k; } if (o.own) own = true; }
     const exe = theo != null && (side > 0 ? l.p >= theo : l.p <= theo), out = ult && (l.p > ult.hi || l.p < ult.lo);
-    const match = !inA && flashed(l.p, side);
-    return `<div class="br ${side > 0 ? 'b' : 'a'}${exe ? ' exe' : ''}${own ? ' own' : ''}${out ? ' out' : ''}${match ? ' match' : ''}" style="--d:${(l.qty / maxQ * 100).toFixed(0)}%"><span class="bk">${exe ? '<span class="lock" title="Não pode ser cancelada nem reduzida">' + LOCK + '</span>' : ''}${own ? 'Você' : top}</span><span>${l.orders.length}</span><span>${fq(l.qty)}</span><span class="bp">${fp(i, l.p)}</span></div>`;
+    const best = l.p === (side > 0 ? bestB : bestA), h = hits.get(side + '|' + l.p);
+    const nome = side > 0 ? 'compra' : 'venda', n = l.orders.length;
+    const tip = `${n} ${n === 1 ? 'oferta' : 'ofertas'} de ${nome} a ${fp(i, l.p)}: ${fq(l.qty)} ${U}. Maior: ${top} (${fq(tq)}).` +
+      (h ? ` Acabaram de ser negociadas ${fq(h.q)} ${U} neste preço.` : '') + ` Toque para ${side > 0 ? 'vender para' : 'comprar de'} quem está aqui.`;
+    return `<div class="br ${side > 0 ? 'b' : 'a'} lv${exe ? ' exe' : ''}${own ? ' own' : ''}${out ? ' out' : ''}${best ? ' best' : ''}${h ? ' hit' : ''}" data-p="${l.p}" data-s="${side}" title="${tip}" style="--d:${(l.qty / maxQ * 100).toFixed(0)}%${h ? ';--hit:' + h.v.toFixed(2) : ''}">` +
+      `<span class="bk">${exe ? '<span class="lock" title="Não pode ser cancelada nem reduzida">' + LOCK + '</span>' : ''}${h ? `<span class="tq">−${fq(h.q)}</span>` : ''}${own ? 'Você' : top}</span><span>${n}</span><span>${fq(l.qty)}</span><span class="bp">${fp(i, l.p)}</span></div>`;
   };
+  const goneHTML = (g, side) => `<div class="br ${side > 0 ? 'b' : 'a'} gone" style="--hit:${g.v.toFixed(2)}" title="Preço zerado: ${fq(g.q)} ${U} negociadas a ${fp(i, g.p)}, e as ofertas desse preço fecharam.">` +
+    `<span class="bk"><span class="tq">−${fq(g.q)}</span>fechou</span><span>0</span><span>0</span><span class="bp">${fp(i, g.p)}</span></div>`;
+  const slotHTML = (r, side) => !r ? '<div class="br empty"></div>' : (r.gone ? goneHTML(r.gone, side) : rowHTML(r.l, side));
   const moaRow = (arr, side) => { const q = arr.reduce((s, o) => s + o.rem, 0); return `<div class="br ${side > 0 ? 'b' : 'a'} exe" style="--d:${Math.min(100, q / maxQ * 100).toFixed(0)}%"><span class="bk"><span class="lock">${LOCK}</span>a mercado (MOA)</span><span>${arr.length}</span><span>${fq(q)}</span><span class="bp">MOA</span></div>`; };
   const items = [];
   if (inA && i.moaS.length) items.push({ html: moaRow(i.moaS, -1) });
-  for (let k = asks.length - 1; k >= 0; k--) items.push({ p: asks[k].p, html: rowHTML(asks[k], -1) });
+  for (let k = N - 1; k >= 0; k--) { const r = askRows[k]; items.push({ p: r ? r.p : null, html: slotHTML(r, -1) }); }
   items.push({ mid: true });
-  for (const l of bids) items.push({ p: l.p, html: rowHTML(l, 1) });
+  for (let k = 0; k < N; k++) { const r = bidRows[k]; items.push({ p: r ? r.p : null, html: slotHTML(r, 1) }); }
   if (inA && i.moaB.length) items.push({ html: moaRow(i.moaB, 1) });
   let mid;
-  if (inA) mid = theo != null ? `<div class="bmk theo">teórico ${fp(i, theo)}, ${fq(a.tq)} ${unitQ(i)}</div>` : `<div class="spread">sem preço teórico: compras e vendas ainda não cruzam</div>`;
-  else { const b = i.bb(), s = i.ba(); mid = `<div class="spread">${b != null && s != null ? 'spread ' + fp(i, s - b) : (b == null && s == null ? 'livro vazio' : 'um dos lados está vazio')}</div>`; }
+  if (inA) mid = theo != null ? `<div class="bmk theo">teórico ${fp(i, theo)}, ${fq(a.tq)} ${U}</div>` : `<div class="spread">sem preço teórico: compras e vendas ainda não cruzam</div>`;
+  else {
+    const lt = i.tt.length ? i.tt[i.tt.length - 1] : null, dir = lt ? (lt.ag > 0 ? 'up' : (lt.ag < 0 ? 'down' : 'flat')) : 'flat';
+    const spr = bestB != null && bestA != null ? 'spread ' + fp(i, bestA - bestB) : (bestB == null && bestA == null ? 'livro vazio' : 'um dos lados está vazio');
+    const ltTip = lt ? `Último negócio: ${fq(lt.q)} ${U} a ${fp(i, lt.p)}` + (lt.ag > 0 ? ', comprador agressor (pagou o preço de quem vendia).' : (lt.ag < 0 ? ', vendedor agressor (aceitou o preço de quem comprava).' : '.')) : '';
+    const tot = askTot + bidTot, pb = tot ? Math.round(bidTot / tot * 100) : 50;
+    mid = `<div class="bk-mid"><div class="bk-mid-r"><span title="Distância entre a melhor venda e a melhor compra">${spr}</span>` +
+      (lt ? `<span class="bk-last ${dir}" title="${ltTip}">último ${fp(i, lt.p)} ${lt.ag > 0 ? '▲' : (lt.ag < 0 ? '▼' : '')}</span>` : '<span class="bk-last flat">sem negócios</span>') + '</div>' +
+      `<div class="bk-press" title="Quantidade nos preços mostrados: compra ${fq(bidTot)}, venda ${fq(askTot)}"><i style="width:${pb}%"></i></div></div>`;
+  }
   const marks = [];
   if (ult) { marks.push({ v: ult.hi, up: true, cls: 'amb', txt: `túnel de leilão ${fp(i, ult.hi)}` }); marks.push({ v: ult.lo, up: false, cls: 'amb', txt: `túnel de leilão ${fp(i, ult.lo)}` }); }
   if (t.rej && (i.state === ST.CONT || i.state === ST.AFTER)) { const nm = i.state === ST.AFTER ? 'limite do after' : 'túnel de rejeição'; marks.push({ v: t.rej.hi, up: true, cls: 'rsp', txt: `${nm} ${fp(i, t.rej.hi)}` }); marks.push({ v: t.rej.lo, up: false, cls: 'rsp', txt: `${nm} ${fp(i, t.rej.lo)}` }); }
-  if (!inA) { // negócio que zerou o nível: some do livro, mas deixa um rastro rápido no lugar (soma tudo que sumiu no mesmo preço)
-    const gone = new Map();
-    for (const f of UI.matchFlash) {
-      if (items.some(it => it.p != null && Math.abs(it.p - f.p) < 1e-9)) continue;
-      const k = f.side + '|' + f.p, g = gone.get(k); if (g) g.q += f.q; else gone.set(k, { side: f.side, p: f.p, q: f.q });
-    }
-    for (const g of gone.values()) marks.push({ v: g.p, up: true, cls: (g.side > 0 ? 'b' : 'a'), txt: `negociado ${fp(i, g.p)} · ${fq(g.q)} ${unitQ(i)}`, gone: true });
-  }
   const pos = marks.map(mk => { let k = items.findIndex(it => it.p != null && (mk.up ? it.p <= mk.v : it.p < mk.v)); return k < 0 ? items.length : k; });
-  let html = '';
+  // os rótulos dos lados ficam por fora da lista: limites além dos preços mostrados aparecem logo depois deles, com ▲/▼
+  let html = `<div class="bk-side a" title="Quem quer vender. O preço mais perto do meio é o mais barato: é por ele que dá para comprar agora."><span>Vendas</span><small>${fq(askTot)} ${U}</small></div>`;
   for (let k = 0; k <= items.length; k++) {
-    marks.forEach((mk, j) => { if (pos[j] === k) html += `<div class="bmk ${mk.gone ? 'gone ' + mk.cls : mk.cls}">${mk.gone ? '' : (k === 0 ? '▲ ' : (k === items.length ? '▼ ' : ''))}${mk.txt}</div>`; });
+    marks.forEach((mk, j) => { if (pos[j] === k) html += `<div class="bmk ${mk.cls}">${k === 0 ? '▲ ' : (k === items.length ? '▼ ' : '')}${mk.txt}</div>`; });
     if (k < items.length) html += items[k].mid ? mid : items[k].html;
   }
-  if (!asks.length && !bids.length && !(inA && (i.moaB.length || i.moaS.length))) html = `<div class="bk-empty">${i.state === ST.PRE ? 'O livro abre na pré-abertura.' : (i.state === ST.CLOSED ? 'Livro encerrado: as ofertas do dia expiraram.' : 'Livro vazio.')}</div>`;
+  html += `<div class="bk-side b" title="Quem quer comprar. O preço mais perto do meio é o mais alto: é por ele que dá para vender agora."><span>Compras</span><small>${fq(bidTot)} ${U}</small></div>`;
+  if (!askRows.length && !bidRows.length && !(inA && (i.moaB.length || i.moaS.length))) html =`<div class="bk-empty">${i.state === ST.PRE ? 'O livro abre na pré-abertura.' : (i.state === ST.CLOSED ? 'Livro encerrado: as ofertas do dia expiraram.' : 'Livro vazio.')}</div>`;
   const bb = $('bookBody'); if (bb._h !== html) { bb._h = html; bb.innerHTML = html; }
   const crossed = inA && i.bb() != null && i.ba() != null && i.bb() >= i.ba();
   setText('bookNote', inA ? (crossed ? 'Livro cruzado: em leilão' : 'Em leilão') : (i.state === ST.AFTER ? 'After-market' : (i.state === ST.HALT ? 'Parado' : '')));
@@ -344,6 +378,16 @@ function setBolDefaults() {
 }
 function setBolType(tp) { UI.bol.type = tp; for (const b of $('bolType').children) b.classList.toggle('on', +b.dataset.t === tp); }
 function setBolSide(s) { UI.bol.side = s; for (const b of $('bolSide').children) b.classList.toggle('on', +b.dataset.s === s); }
+/* toque numa oferta do livro: a boleta passa a negociar com ela (oferta de venda → você compra; de compra → você vende) */
+function bookPick(p, side) {
+  const i = UI.focus;
+  setBolSide(side > 0 ? -1 : 1); setBolType(LMT);
+  $('bolP').value = fp(i, p);
+  updateBoleta();
+  const f = $('bolP'); f.classList.remove('pick'); void f.offsetWidth; f.classList.add('pick');
+  const r = f.getBoundingClientRect();
+  if (r.top < barBottom() || r.bottom > window.innerHeight) f.scrollIntoView({ block: 'center', behavior: UI.reduced ? 'auto' : 'smooth' });
+}
 function updateBoleta() {
   const i = UI.focus, E = UI.E, inA = inAuctionLike(i), tb = $('bolType').children;
   setText('bolTk', i.ticker);
@@ -1171,6 +1215,7 @@ function wire() {
   $('bolP').addEventListener('input', updateBoleta); $('bolQ').addEventListener('input', updateBoleta);
   $('bolQ').addEventListener('blur', () => { const q = parseQty($('bolQ').value); if (q) $('bolQ').value = fq(q); });
   $('bolShorts').onclick = e => { const b = e.target.closest('button[data-k]'); if (b) bolShortcut(b.dataset.k); };
+  $('bookBody').onclick = e => { const r = e.target.closest('.br[data-p]'); if (r) bookPick(+r.dataset.p, +r.dataset.s); };
   $('bolSend').onclick = sendOrder;
   $('myoList').onclick = e => { const b = e.target.closest('button[data-a]'); if (b) ownAction(b.dataset.a, b.dataset.tk, +b.dataset.id); };
   // rodapé

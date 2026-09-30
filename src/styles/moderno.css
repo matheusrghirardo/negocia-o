@@ -140,5 +140,5 @@ body{
 @media (prefers-reduced-motion: reduce){
   .les-card,.op-term,.g-card,.st-card,.fl-card,.op-exc,.blk,.btn,.op-toc a{transition:none}
   .les-card:hover,.op-term:hover,.g-card:hover,.st-card:hover,.fl-card:hover,.op-exc:hover,.blk:hover,.op-toc a:hover{transform:none}
-  .br.match.b,.br.match.a,.bmk.gone{animation:none}
+  .fld input.pick{animation:none}
 }
