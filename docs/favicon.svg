@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28">
+<style>.bg{fill:#f4f6f9;stroke:#c6cfda}.r{stroke:#8c1d52}.u{stroke:#9a6a0a}.p{stroke:#101b2d}
+@media (prefers-color-scheme:dark){.bg{fill:#141d2b;stroke:#2a3749}.r{stroke:#dc72a9}.u{stroke:#dcae52}.p{stroke:#e3e8ef}}</style>
+<rect class="bg" x="0.5" y="0.5" width="27" height="27" rx="7"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path class="r" stroke-width="1.6" d="M5 6.5h18M5 21.5h18"/>
+<path class="u" stroke-width="2" d="M5 10.5h18M5 17.5h18"/>
+<path class="p" stroke-width="1.6" d="M5 15h4v-2h4v1.5h4V12.5h6"/>
+</g>
+</svg>

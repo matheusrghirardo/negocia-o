@@ -15,6 +15,14 @@
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <script>try { const t = localStorage.getItem('b3tuneis.tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* sem armazenamento */ }</script>
 <script type="module" src="/src/main.js"></script>
+<script>/* aberto com dois cliques na versão de desenvolvimento (só docs/ funciona assim): avisa onde está a certa */
+if (location.protocol === 'file:' && document.querySelector('script[src="/src/main.js"]')) addEventListener('DOMContentLoaded', () => {
+  document.body.style.background = '#f2f5fa';
+  document.body.innerHTML = '<div id="avisoDev" style="max-width:620px;margin:14vh auto 0;padding:24px 28px;background:#fff4d6;color:#3b2a00;border:2px solid #b07408;border-radius:14px;font:16px/1.6 system-ui,sans-serif">' +
+    '<b>Esta é a versão de desenvolvimento e não abre com dois cliques.</b><br>Abra o <b>index.html de dentro da pasta docs</b>, ao lado deste arquivo.<br><br>' +
+    'Ou, com o Node instalado, rode <code>npm run dev</code> (ou dê dois cliques em iniciar.bat).</div>';
+});
+</script>
 <script defer src="./js/01-config.js"></script>
 <script defer src="./js/02-motor.js"></script>
 <script defer src="./js/03-aulas.js"></script>
@@ -187,7 +195,6 @@
           </div>
           <section class="sec card" id="secBook" aria-label="Livro de ofertas">
             <div class="sec-h"><h2>Livro de ofertas</h2><span class="note" id="bookNote"></span></div>
-            <div class="bk-cols"><span title="Corretora com a maior quantidade nesse preço">Corretora</span><span title="Número de ofertas nesse preço">Nº</span><span title="Quantidade total nesse preço">Qtd</span><span>Preço</span></div>
             <div id="bookBody"></div>
             <p class="bk-foot"><span class="it"><span class="tq">−300</span>negócio saindo no preço</span><span class="it"><s>riscado</s>: preço zerou</span><span class="it">Toque numa oferta para negociar com ela.</span></p>
           </section>

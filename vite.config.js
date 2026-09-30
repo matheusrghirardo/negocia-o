@@ -30,6 +30,7 @@ export default defineConfig({
   base: './',
   plugins: [paraAbrirSemServidor()],
   build: {
+    outDir: 'docs', // vai para o GitHub: baixar e abrir docs/index.html, ou publicar pelo GitHub Pages (pasta /docs)
     cssCodeSplit: false,
     rollupOptions: { output: { format: 'iife', inlineDynamicImports: true } }
   },

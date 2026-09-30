@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador dos túneis de negociação da B3</title>
+<meta name="description" content="Simulação educativa de um pregão com os túneis de rejeição, leilão e proteção da B3, aulas guiadas e um guia ilustrado de opções. Dados fictícios.">
+<meta name="author" content="Matheus Ghirardo">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1521" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Simulador dos túneis de negociação da B3">
+<meta property="og:description" content="Simulação educativa de um pregão com os túneis de rejeição, leilão e proteção da B3, aulas guiadas e um guia ilustrado de opções. Dados fictícios.">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<script>try { const t = localStorage.getItem('b3tuneis.tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* sem armazenamento */ }</script>
+<script>/* aberto com dois cliques na versão de desenvolvimento (só docs/ funciona assim): avisa onde está a certa */
+if (location.protocol === 'file:' && document.querySelector('script[src="/src/main.js"]')) addEventListener('DOMContentLoaded', () => {
+  document.body.style.background = '#f2f5fa';
+  document.body.innerHTML = '<div id="avisoDev" style="max-width:620px;margin:14vh auto 0;padding:24px 28px;background:#fff4d6;color:#3b2a00;border:2px solid #b07408;border-radius:14px;font:16px/1.6 system-ui,sans-serif">' +
+    '<b>Esta é a versão de desenvolvimento e não abre com dois cliques.</b><br>Abra o <b>index.html de dentro da pasta docs</b>, ao lado deste arquivo.<br><br>' +
+    'Ou, com o Node instalado, rode <code>npm run dev</code> (ou dê dois cliques em iniciar.bat).</div>';
+});
+</script>
+<script defer src="./assets/index-DM5Wjh6P.js"></script>
+<script defer src="./js/01-config.js"></script>
+<script defer src="./js/02-motor.js"></script>
+<script defer src="./js/03-aulas.js"></script>
+<script defer src="./js/04-grafico.js"></script>
+<script defer src="./js/05-interface.js"></script>
+<script defer src="./js/06-aula-guiada.js"></script>
+  <link rel="stylesheet" href="./assets/style-Cl6J05iq.css">
+</head>
+<body>
+<div class="scroll-prog" id="scrollProg" aria-hidden="true"></div>
+<header class="site-head" id="top">
+  <div class="wrap head-in">
+    <a class="brand" href="#top" aria-label="Túneis de negociação, início da página">
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect class="bm-bg" x="0.5" y="0.5" width="27" height="27" rx="7"/><path class="bm-rej" d="M5 6.5h18M5 21.5h18"/><path class="bm-ult" d="M5 10.5h18M5 17.5h18"/><path class="bm-px" d="M5 15h4v-2h4v1.5h4V12.5h6"/></svg>
+      <span class="brand-t">Túneis de negociação</span><span class="brand-s">simulador educativo</span>
+    </a>
+    <nav class="site-nav" aria-label="Seções da página">
+      <a href="#simulador"><i data-lucide="chart-candlestick"></i>Simulador</a><a href="#aulas"><i data-lucide="graduation-cap"></i>Aulas</a><a href="#como-funciona"><i data-lucide="layers"></i>Como funciona</a><a href="#opcoes"><i data-lucide="sigma"></i>Opções</a><a href="#parametros"><i data-lucide="sliders-horizontal"></i>Parâmetros</a>
+    </nav>
+    <div class="head-tools"><button class="icon-btn" id="themeBtn" type="button" aria-label="Alternar tema"></button></div>
+  </div>
+</header>
+
+<main id="page">
+  <section class="wrap hero" aria-labelledby="heroTitle">
+    <div class="hero-text">
+      <p class="eyebrow">Simulador educativo · dados fictícios</p>
+      <h1 id="heroTitle">Veja os <span class="grad">túneis de negociação</span> da B3 em ação</h1>
+      <p class="lead">Um pregão simulado, do call de abertura ao after-market, mostra na hora quando uma oferta é recusada, quando um negócio vira leilão e por que um leilão é prorrogado. Os preços são fictícios, e os parâmetros são uma versão didática das regras públicas da B3.</p>
+      <div class="hero-cta"><a class="btn big primary" href="#simulador"><i data-lucide="chart-candlestick"></i>Abrir o simulador</a><a class="btn big" href="#aulas"><i data-lucide="graduation-cap"></i>Escolher uma aula guiada</a></div>
+      <p class="hero-facts" id="heroFacts"></p>
+      <p class="hero-by">Um projeto de estudo de <b>Matheus Ghirardo</b></p>
+    </div>
+    <figure class="card hero-fig">
+      <div class="fig-top"><span>O que o gráfico mostra</span><span>ilustração fora de escala</span></div>
+      <svg class="hf" viewBox="0 0 560 300" role="img" aria-labelledby="hfTitle">
+        <title id="hfTitle">Ilustração: o preço anda em degraus dentro do túnel de leilão dourado; acima e abaixo ficam as zonas de rejeição, hachuradas em vinho. Um negócio além do túnel abre um bloco de leilão com a faixa de proteção, e depois os túneis se recentralizam.</title>
+        <defs><pattern id="hfHatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect class="ph-bg" width="7" height="7"/><rect class="ph-ln" width="1.6" height="7"/></pattern></defs>
+        <rect fill="url(#hfHatch)" x="0" y="0" width="392" height="64"/>
+        <rect fill="url(#hfHatch)" x="392" y="0" width="168" height="28"/>
+        <rect fill="url(#hfHatch)" x="0" y="288" width="392" height="12"/>
+        <rect fill="url(#hfHatch)" x="392" y="252" width="168" height="48"/>
+        <rect class="z-auc" x="0" y="64" width="300" height="72"/>
+        <rect class="z-auc" x="0" y="216" width="300" height="72"/>
+        <rect class="z-auc" x="392" y="28" width="168" height="72"/>
+        <rect class="z-auc" x="392" y="180" width="168" height="72"/>
+        <rect class="z-free" x="0" y="136" width="300" height="80"/>
+        <rect class="z-free" x="392" y="100" width="168" height="80"/>
+        <rect class="blk" x="300" y="0" width="92" height="300"/>
+        <rect class="prot" x="300" y="116" width="92" height="52"/>
+        <path class="l-prot" d="M300 116.5H392M300 167.5H392"/>
+        <path class="blk-e" d="M300.5 0V300M391.5 0V300"/>
+        <path class="l-rej" d="M0 64H392V28H560M0 288H392V252H560"/>
+        <path class="l-ult" d="M0 136H300M0 216H300M392 100H560M392 180H560"/>
+        <path class="theo" d="M300 142H314V130H330V136H348V126H366V134H380V140H392"/>
+        <path class="px" pathLength="1" d="M0 184H26V176H50V182H74V170H98V176H122V164H146V168H170V158H194V162H218V152H242V148H266V144H284V142H300"/>
+        <path class="px p2" pathLength="1" d="M392 140H410V146H428V136H446V142H464V132H482V138H500V130H518V136H536V128H560"/>
+        <path class="dia" d="M392 133L399 140L392 147L385 140Z"/>
+        <path class="spark" d="M166 30l10 10M176 30l-10 10"/>
+        <rect class="pill" x="305" y="7" width="54" height="19" rx="5"/>
+        <text class="t-pill" x="312" y="21">leilão</text>
+        <text class="t-rej" x="10" y="22">rejeição</text>
+        <text class="t-rej t-min" x="184" y="40">oferta recusada</text>
+        <text class="t-auc" x="10" y="94">zona de leilão</text>
+        <text class="t-free t-min" x="10" y="206">corredor livre</text>
+        <text class="t-prot t-min" x="305" y="186">proteção</text>
+      </svg>
+      <figcaption class="fig-key">
+        <div><b><i class="k-ult"></i>Túnel de leilão</b>Um negócio além do tubo dourado não sai: o ativo entra em leilão.</div>
+        <div><b><i class="k-rej"></i>Túnel de rejeição</b>Compra acima ou venda abaixo da linha vinho nem entra no livro.</div>
+        <div><b><i class="k-prot"></i>Proteção</b>Se o preço teórico terminar fora da faixa, o leilão é prorrogado.</div>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="sim" id="simulador" aria-labelledby="simTitle">
+    <div class="wrap sim-intro">
+      <h2 class="page-h2" id="simTitle">Pregão simulado</h2>
+      <p class="sec-lead">Simulação educativa com dados fictícios. Parâmetros didáticos inspirados nas regras públicas da B3; confira a versão oficial vigente antes de usar em aula.</p>
+    </div>
+
+    <div class="sim-bar" id="bar">
+      <div class="wrap bar-in">
+        <div class="b-clock">
+          <div class="clock" id="clock" aria-live="off">09:40:00</div>
+          <div class="phase" id="phase" data-k="deriv"><i></i><span>Negociação</span></div>
+        </div>
+        <div class="b-ibov" title="Índice simulado, ponderado pelas oito ações do grupo Ibovespa">
+          <span class="k">Ibovespa</span><span class="v" id="ibovVal">130.000</span><span class="d flat" id="ibovVar">0,00%</span>
+        </div>
+        <div class="b-day" id="dayWrap"><canvas id="daybar" aria-label="Fases do dia"></canvas></div>
+        <button class="btn" id="bPause" aria-pressed="false"><i data-lucide="pause" class="ic-pause"></i><i data-lucide="play" class="ic-play"></i><span class="bl">Pausar</span></button>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="sim-ctrl" id="controls">
+        <div class="seg" id="segSpeed" role="group" aria-label="Velocidade">
+          <button data-v="lento">Lento</button><button data-v="normal">Normal</button><button data-v="rapido">Rápido</button><button data-v="turbo">Turbo</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="cSlow" checked><span>Câmera lenta nos leilões</span></label>
+        <span class="slowtag" id="slowTag" hidden>câmera lenta ativa</span>
+        <div class="dd">
+          <button class="btn" id="bScen" aria-haspopup="true" aria-expanded="false"><i data-lucide="sparkles"></i>Cenários</button>
+          <div class="menu" id="mScen" hidden role="menu"></div>
+        </div>
+        <div class="dd">
+          <button class="btn les-btn" id="bLes" aria-haspopup="true" aria-expanded="false"><i data-lucide="graduation-cap"></i>Aulas</button>
+          <div class="menu" id="mLes" hidden role="menu"></div>
+        </div>
+        <div class="seg" id="segInt" role="group" aria-label="Intensidade">
+          <button data-v="calmo">Calmo</button><button data-v="normal">Normal</button><button data-v="agitado">Agitado</button>
+        </div>
+        <button class="btn" id="bSkip"><i data-lucide="skip-forward"></i>Pular para 10:00</button>
+        <button class="btn" id="bNew"><i data-lucide="rotate-ccw"></i>Novo pregão</button>
+        <button class="btn" id="bLegend"><i data-lucide="book-open"></i>Legenda</button>
+        <button class="btn" id="bCompact" aria-pressed="false">Modo compacto</button>
+        <div class="seg" id="segCompact" role="group" aria-label="Painel em foco" hidden><button data-v="mercado">Mercado</button><button data-v="grafico">Gráfico</button><button data-v="livro">Livro</button><button data-v="eventos">Eventos</button></div>
+      </div>
+
+      <section class="card board" id="colMap" aria-labelledby="hMap">
+        <div class="card-h">
+          <div><h2 id="hMap">Mapa do pregão</h2><p>Toque num ativo para vê-lo no gráfico. Quem entra em leilão sobe para a faixa de cima.</p></div>
+          <div class="seg sm" id="segMap" role="group" aria-label="Visão do mapa"><button data-v="blocos" class="on">Blocos</button><button data-v="lista">Lista</button></div>
+        </div>
+        <div class="map-scroll" id="mapScroll">
+          <div class="auc-strip" id="aucStrip">
+            <div class="strip-head"><span>Em leilão agora</span><span id="aucCount"></span></div>
+            <div class="blocks" id="aucStripBody"></div>
+            <div class="strip-empty" id="aucEmpty">Nenhum ativo em leilão. Quando um negócio sair fora do túnel, o ativo aparece aqui.</div>
+          </div>
+          <div id="mapGroups"></div>
+          <div id="mapList" hidden></div>
+        </div>
+      </section>
+
+      <div class="focus-grid" id="focusGrid">
+        <section class="card focus" id="colCenter" aria-label="Ativo em foco">
+          <div class="focus-head" id="focusHead">
+            <div class="fh-id"><span class="fh-tk" id="fhTk">PETR4</span><span class="fh-name" id="fhName"></span></div>
+            <span class="fh-px" id="fhPx"></span><span class="fh-var" id="fhVar"></span>
+            <span class="chip" id="fhState"></span>
+            <div class="fh-tools">
+              <div class="seg sm" id="segZoom" role="group" aria-label="Janela do gráfico"><button data-v="300">5 min</button><button data-v="1800">30 min</button><button data-v="day">Dia</button></div>
+              <button class="btn" id="bLive" style="height:26px;font-size:12px">Ao vivo</button>
+              <button class="btn" id="bFull" style="height:26px;font-size:12px" aria-pressed="false">Escala completa</button>
+            </div>
+            <div class="fh-meta" id="fhMeta"></div>
+          </div>
+          <div class="chart-area">
+            <div class="chart-wrap" id="chartWrap">
+              <canvas id="chart" aria-label="Gráfico-túnel do ativo em foco"></canvas>
+              <div class="chart-legend" id="chartLegend"></div>
+              <div class="ctip" id="ctip" hidden></div>
+            </div>
+            <div class="regua-wrap" id="reguaWrap"><canvas id="regua" aria-label="Régua de túneis"></canvas></div>
+          </div>
+          <div class="mini-wrap" id="miniWrap" hidden><span class="mini-lbl" id="miniLbl">PETR4, ativo-objeto (mesmo eixo de tempo)</span><canvas id="mini"></canvas></div>
+          <div class="panel" id="panelBox"></div>
+        </section>
+
+        <div class="rail" id="colRight">
+          <div class="lesson" id="lesson" hidden role="region" aria-live="polite" aria-label="Aula guiada">
+            <div class="ls-head">
+              <div class="ls-ht"><div class="ls-kicker" id="lsKick"></div><h3 id="lsTitle"></h3></div>
+              <div class="ls-hb"><button class="ls-x ls-min" id="lsMin" data-ls="min" aria-label="Recolher ou expandir a aula">▾</button><button class="ls-x" data-ls="exit" aria-label="Sair da aula">×</button></div>
+            </div>
+            <div class="ls-prog" id="lsProg"></div>
+            <div class="ls-body" id="lsBody"></div>
+            <div class="ls-foot" id="lsFoot"></div>
+          </div>
+          <section class="sec card" id="secBook" aria-label="Livro de ofertas">
+            <div class="sec-h"><h2>Livro de ofertas</h2><span class="note" id="bookNote"></span></div>
+            <div id="bookBody"></div>
+            <p class="bk-foot"><span class="it"><span class="tq">−300</span>negócio saindo no preço</span><span class="it"><s>riscado</s>: preço zerou</span><span class="it">Toque numa oferta para negociar com ela.</span></p>
+          </section>
+          <section class="sec card bol" id="secBol" aria-label="Boleta">
+            <div class="sec-h" style="padding:0 0 8px"><h2>Boleta</h2><span class="note" id="bolTk"></span></div>
+            <div class="bol-row">
+              <div class="bol-side" id="bolSide"><button class="buy on" data-s="1">Compra</button><button class="sell" data-s="-1">Venda</button></div>
+            </div>
+            <div class="bol-row"><div class="seg sm" id="bolType" style="width:100%"><button data-t="0" class="on" style="flex:1">Limitada</button><button data-t="1" style="flex:1">A mercado</button><button data-t="2" style="flex:1">MOA (leilão)</button></div></div>
+            <div class="bol-row">
+              <div class="fld"><label for="bolP">Preço</label><input id="bolP" inputmode="decimal" autocomplete="off"></div>
+              <div class="fld"><label for="bolQ">Quantidade</label><input id="bolQ" inputmode="numeric" autocomplete="off"></div>
+            </div>
+            <div class="shorts" id="bolShorts">
+              <button data-k="lim">No limite do túnel</button>
+              <button data-k="tick">1 tick além do túnel</button>
+              <button data-k="typo">Erro de digitação</button>
+              <button data-k="qty">Quantidade gigante</button>
+            </div>
+            <div class="pv" id="bolPv" aria-live="polite">Digite um preço para ver o que aconteceria.</div>
+            <button class="send" id="bolSend">Enviar compra</button>
+            <div class="myo" id="myo" hidden><h4>Minhas ofertas</h4><div id="myoList"></div><div class="mo-msg" id="myoMsg"></div></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="events-grid" id="eventsGrid">
+        <section class="card bottom" id="bottom" aria-label="Eventos do pregão">
+          <div class="btabs" id="btabs">
+            <button data-v="feed" class="on">Feed de eventos</button>
+            <button data-v="timeline">Linha do tempo dos leilões</button>
+            <button data-v="numeros">Números do dia</button>
+            <div class="ffil" id="ffil"></div>
+          </div>
+          <div class="bpane" id="paneFeed"><div id="feed"></div></div>
+          <div class="bpane" id="paneTl" hidden><div class="tl-wrap" id="tlWrap"><canvas id="tl" aria-label="Linha do tempo dos leilões"></canvas></div></div>
+          <div class="bpane" id="paneNums" hidden><div class="nums" id="nums"></div></div>
+        </section>
+        <section class="sec card trades-card" id="secTrades" aria-label="Negócios">
+          <div class="sec-h"><h2>Negócios</h2></div>
+          <div class="tt-cols"><span>Hora</span><span>Preço</span><span>Qtd</span><span title="Corretora compradora">Compra</span><span title="Corretora vendedora">Venda</span><span title="Lado agressor">A</span></div>
+          <div class="trades-body" id="ttBody"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap page-sec" id="aulas" aria-labelledby="hAulas">
+    <div class="sec-head">
+      <h2 class="page-h2" id="hAulas">Aulas guiadas</h2>
+      <p class="sec-lead">Micro-cenários com roteiro fixo, em três trilhas. O pregão pausa em cada etapa e explica, com os números da hora, o que aconteceu e por quê. Cada aula termina com um resumo e um teste rápido, e as concluídas ficam marcadas neste navegador.</p>
+    </div>
+    <div class="les-tabs" id="lesTabs" role="tablist" aria-label="Trilha de aulas"></div>
+    <div id="lesGrid"></div>
+  </section>
+
+  <section class="wrap page-sec" id="como-funciona" aria-labelledby="hGuide" hidden>
+    <div class="sec-head">
+      <h2 class="page-h2" id="hGuide">Como funcionam os túneis</h2>
+      <p class="sec-lead">Cada túnel age num momento diferente: na entrada da oferta, no negócio ou no fim do leilão. No gráfico, eles aparecem em camadas. Dentro do tubo dourado, o negócio sai normalmente. Entre o tubo e a linha vinho, um negócio dispara leilão. Além da linha vinho, compra acima do limite ou venda abaixo dele é recusada.</p>
+    </div>
+    <div id="guideBody"></div>
+  </section>
+
+  <section class="wrap page-sec" id="opcoes" aria-labelledby="hOpc" hidden>
+    <div class="sec-head">
+      <h2 class="page-h2" id="hOpc">Opções: como funcionam</h2>
+      <p class="sec-lead">Um guia em sete partes para acompanhar as aulas de opções: o que são call e put, como ler o código, quanto vale uma opção, o que acontece no vencimento, as estratégias mais comuns e como o modelo calcula o preço. Os exemplos usam as duas opções do simulador, PETRJ400 e PETRV370.</p>
+    </div>
+    <nav class="op-toc" aria-label="Partes do guia de opções">
+      <a href="#op-1"><b>1</b>O que é</a><a href="#op-2"><b>2</b>Vocabulário</a><a href="#op-3"><b>3</b>O código</a><a href="#op-4"><b>4</b>Quanto vale</a><a href="#op-5"><b>5</b>Do lançamento ao exercício</a><a href="#op-6"><b>6</b>Estratégias</a><a href="#op-7"><b>7</b>Negociação e modelo</a>
+    </nav>
+
+    <div class="op-ch" id="op-1">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="true" aria-controls="op-1-body"><span class="op-n">1</span><h3>O que é uma opção</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-1-body">
+      <p class="op-def">Uma <b>opção</b> é um contrato que dá a quem compra, o <b>titular</b>, o direito de comprar ou de vender um ativo por um preço combinado, o <b>strike</b>, até uma data, o <b>vencimento</b>. É um direito, não uma obrigação. Quem vende a opção, o <b>lançador</b>, recebe à vista um valor por isso, o <b>prêmio</b>, e fica com a obrigação de cumprir o negócio se o titular exercer.</p>
+      <h4 class="op-sub">Quem paga o quê</h4>
+      <div class="op-flow" id="opFlow"></div>
+      <div class="fl-key"><span><i style="border-color:var(--amber)"></i>dinheiro</span><span><i style="border-color:var(--accent)"></i>direito ou ações</span><span>Exemplo com 1 lote e os prêmios de fechamento do simulador.</span></div>
+      <div class="op-pair">
+        <article class="card op-card">
+          <div class="op-top"><span class="op-tag call">Call</span><span class="op-kind">opção de compra</span></div>
+          <h4>O direito de comprar pelo strike</h4>
+          <p>Ganha valor quando o ativo sobe. O titular tem lucro no vencimento se o ativo terminar acima do strike mais o prêmio pago.</p>
+          <svg class="pf" viewBox="0 0 200 84" role="img" aria-label="Resultado do titular de uma call no vencimento: perda igual ao prêmio até o strike e lucro crescente acima dele">
+            <path class="pf-loss" d="M8 40V50H100L122 40Z"/><path class="pf-gain" d="M122 40L192 8V40Z"/>
+            <path class="pf-zero" d="M8 40.5H192"/><path class="pf-k" d="M100.5 6V66"/>
+            <path class="pf-line" d="M8 50H100L192 8"/>
+            <text x="100" y="78" text-anchor="middle">strike</text><text x="10" y="64">perde o prêmio</text><text x="190" y="30" text-anchor="end">lucro</text>
+          </svg>
+          <dl class="op-dl">
+            <div><dt>Titular</dt><dd>paga o prêmio e pode comprar pelo strike</dd></div>
+            <div><dt>Lançador</dt><dd>recebe o prêmio e, se exercido, vende pelo strike</dd></div>
+            <div><dt>Para que serve</dt><dd>ganhar com a alta arriscando só o prêmio, ou, para o lançador, receber renda sobre ações que já tem</dd></div>
+            <div><dt>No simulador</dt><dd>PETRJ400: call de PETR4, strike R$ 40,00, vencimento em outubro</dd></div>
+          </dl>
+        </article>
+        <article class="card op-card">
+          <div class="op-top"><span class="op-tag put">Put</span><span class="op-kind">opção de venda</span></div>
+          <h4>O direito de vender pelo strike</h4>
+          <p>Ganha valor quando o ativo cai. Funciona como um seguro: o titular garante um preço mínimo de venda, o strike.</p>
+          <svg class="pf" viewBox="0 0 200 84" role="img" aria-label="Resultado do titular de uma put no vencimento: lucro crescente abaixo do strike e perda igual ao prêmio acima dele">
+            <path class="pf-gain" d="M8 40V8L78 40Z"/><path class="pf-loss" d="M78 40L100 50H192V40Z"/>
+            <path class="pf-zero" d="M8 40.5H192"/><path class="pf-k" d="M100.5 6V66"/>
+            <path class="pf-line" d="M8 8L100 50H192"/>
+            <text x="100" y="78" text-anchor="middle">strike</text><text x="190" y="64" text-anchor="end">perde o prêmio</text><text x="10" y="30">lucro</text>
+          </svg>
+          <dl class="op-dl">
+            <div><dt>Titular</dt><dd>paga o prêmio e pode vender pelo strike</dd></div>
+            <div><dt>Lançador</dt><dd>recebe o prêmio e, se exercido, compra pelo strike</dd></div>
+            <div><dt>Para que serve</dt><dd>proteger uma carteira contra a queda, ou, para o lançador, receber para aceitar comprar mais barato</dd></div>
+            <div><dt>No simulador</dt><dd>PETRV370: put de PETR4, strike R$ 37,00, vencimento em outubro</dd></div>
+          </dl>
+        </article>
+      </div>
+      </div>
+    </div>
+
+    <div class="op-ch" id="op-2">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="false" aria-controls="op-2-body"><span class="op-n">2</span><h3>Vocabulário</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-2-body" hidden>
+      <dl class="op-terms">
+        <div class="card op-term"><dt>Ativo-objeto</dt><dd>O ativo que a opção dá direito de comprar ou vender. Nas opções do simulador, é PETR4.</dd></div>
+        <div class="card op-term"><dt>Strike</dt><dd>O preço de exercício, combinado no contrato. Com uma call de strike R$ 40,00, o titular pode comprar a R$ 40,00, não importa quanto o ativo esteja valendo.</dd></div>
+        <div class="card op-term"><dt>Prêmio</dt><dd>O preço da opção. O titular paga e o lançador recebe no dia do negócio. É cotado por opção, e a quantidade anda em lotes.</dd></div>
+        <div class="card op-term"><dt>Vencimento</dt><dd>A data em que a opção deixa de existir. Nas opções mensais sobre ações da B3, é a terceira sexta-feira do mês.</dd></div>
+        <div class="card op-term"><dt>Titular e lançador</dt><dd>O titular comprou a opção e tem o direito. O lançador vendeu, recebeu o prêmio e tem a obrigação. O lançador coberto já tem o ativo; o descoberto deposita garantias na bolsa.</dd></div>
+        <div class="card op-term"><dt>Exercício</dt><dd>É quando o titular usa o direito: na call, compra o ativo pelo strike; na put, vende pelo strike. A bolsa designa um lançador daquela série para cumprir a obrigação.</dd></div>
+        <div class="card op-term"><dt>Dentro, no e fora do dinheiro</dt><dd>Uma call está dentro do dinheiro quando o ativo vale mais que o strike, e fora quando vale menos. Perto do strike, está no dinheiro. Na put, é o contrário.</dd></div>
+        <div class="card op-term"><dt>Valor intrínseco</dt><dd>Quanto a opção valeria se fosse exercida agora: na call, o ativo menos o strike; na put, o strike menos o ativo. Fora do dinheiro, é zero.</dd></div>
+        <div class="card op-term"><dt>Valor extrínseco</dt><dd>O resto do prêmio, também chamado de valor tempo: quanto vale a chance de a opção ganhar valor até o vencimento. Ele diminui com os dias e zera no vencimento.</dd></div>
+        <div class="card op-term"><dt>Americana e europeia</dt><dd>A americana pode ser exercida em qualquer dia até o vencimento; a europeia, só no vencimento. Na B3, é comum a call de ação ser americana e a put, europeia; o estilo consta na especificação de cada série.</dd></div>
+        <div class="card op-term"><dt>Série</dt><dd>Cada combinação de ativo-objeto, tipo, strike e vencimento é uma série, com código próprio. PETRJ400 e PETRV370 são duas séries de PETR4.</dd></div>
+        <div class="card op-term"><dt>Volatilidade implícita</dt><dd>A volatilidade que, colocada no modelo, reproduz o prêmio negociado no mercado. É a medida usada para comparar opções de strikes e vencimentos diferentes.</dd></div>
+      </dl>
+      <div class="card op-mny">
+        <h4>Dentro, no ou fora do dinheiro</h4>
+        <p>A mesma faixa de preço, vista pela call e pela put de strike R$ 40,00. Com PETR4 a R$ 38,50, a call está fora do dinheiro: exercer seria comprar por R$ 40,00 o que vale R$ 38,50. A put de mesmo strike está dentro: dá para vender por R$ 40,00 o que vale R$ 38,50, um valor intrínseco de R$ 1,50.</p>
+        <div id="opMny"></div>
+      </div>
+      </div>
+    </div>
+
+    <div class="op-ch" id="op-3">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="false" aria-controls="op-3-body"><span class="op-n">3</span><h3>Como ler o código</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-3-body" hidden>
+      <div class="card op-code">
+        <div>
+          <p class="oc-txt">O código de uma opção de ação tem três partes. A letra do meio diz o mês de vencimento e o tipo: de A a L são calls; de M a X, puts.</p>
+          <div class="oc-anat" aria-label="PETRJ400 em três partes"><span class="oc-p"><b>PETR</b><small>ativo-objeto</small></span><span class="oc-p hl"><b>J</b><small>outubro, call</small></span><span class="oc-p"><b>400</b><small>série</small></span></div>
+          <p class="oc-note">O número identifica a série. Muitas vezes lembra o strike (400 e R$ 40,00), mas não é garantia: o strike pode ser ajustado quando a empresa paga proventos. PETRV370 segue a mesma regra: V é put de outubro.</p>
+        </div>
+        <div class="scrollx">
+          <table class="oc-tab">
+            <thead><tr><th>Mês</th><th>jan</th><th>fev</th><th>mar</th><th>abr</th><th>mai</th><th>jun</th><th>jul</th><th>ago</th><th>set</th><th>out</th><th>nov</th><th>dez</th></tr></thead>
+            <tbody>
+              <tr><th>Call</th><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>G</td><td>H</td><td>I</td><td class="hl">J</td><td>K</td><td>L</td></tr>
+              <tr><th>Put</th><td>M</td><td>N</td><td>O</td><td>P</td><td>Q</td><td>R</td><td>S</td><td>T</td><td>U</td><td class="hl">V</td><td>W</td><td>X</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="op-ch" id="op-4">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="false" aria-controls="op-4-body"><span class="op-n">4</span><h3>Quanto vale uma opção</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-4-body" hidden>
+      <p class="op-intro">O prêmio tem duas partes: o <b>valor intrínseco</b>, que é o ganho de exercer agora, e o <b>valor extrínseco</b>, que é o preço da chance de ganhar mais até o vencimento. O laboratório calcula as duas pelo modelo de Black-Scholes. A grade e os dois gráficos abaixo dele usam os mesmos números: mexa nos controles e veja tudo mudar junto.</p>
+      <div class="card op-lab" id="opLab">
+        <div class="lab-head">
+          <div><h4>Laboratório: quanto vale uma opção</h4><p>Mexa nos controles e veja o prêmio pelo modelo, os valores intrínseco e extrínseco, o delta e o resultado de quem compra ou de quem vende. Comece pelas opções do simulador.</p></div>
+          <div class="lab-presets"><button class="btn" data-pre="call">PETRJ400 (call)</button><button class="btn" data-pre="put">PETRV370 (put)</button></div>
+        </div>
+        <div class="lab-grid">
+          <div class="lab-ctrl">
+            <div class="seg" id="labType" role="group" aria-label="Tipo de opção"><button data-v="C" class="on">Call</button><button data-v="P">Put</button></div>
+            <div class="seg sm" id="labSide" role="group" aria-label="Lado"><button data-v="1" class="on">Titular (compra)</button><button data-v="-1">Lançador (vende)</button></div>
+            <label class="lab-f" for="labS"><span>Preço do ativo <b id="labSv"></b></span><input type="range" id="labS" min="10" max="80" step="0.05" value="38.5"></label>
+            <label class="lab-f" for="labK"><span>Strike <b id="labKv"></b></span><input type="range" id="labK" min="10" max="80" step="0.25" value="40"></label>
+            <label class="lab-f" for="labT"><span>Tempo até o vencimento <b id="labTv"></b></span><input type="range" id="labT" min="0" max="126" step="1" value="15"></label>
+            <label class="lab-f" for="labV"><span>Volatilidade <b id="labVv"></b></span><input type="range" id="labV" min="5" max="100" step="1" value="31"></label>
+            <label class="lab-f" for="labR"><span>Juros <b id="labRv"></b></span><input type="range" id="labR" min="0" max="20" step="0.25" value="14.25"></label>
+            <button class="btn" id="labLive">Usar o preço de PETR4 agora</button>
+          </div>
+          <div class="lab-out">
+            <div class="lab-kpis">
+              <div class="kpi main"><span>Prêmio pelo modelo</span><b id="labPrem"></b><small id="labLot"></small></div>
+              <div class="kpi"><span>Valor intrínseco</span><b id="labIntr"></b><small>o que vale se exercer agora</small></div>
+              <div class="kpi"><span>Valor extrínseco</span><b id="labExt"></b><small>o valor do tempo que falta</small></div>
+              <div class="kpi"><span>Situação</span><b id="labMny"></b><small id="labMnyTxt"></small></div>
+              <div class="kpi"><span>Delta</span><b id="labDelta"></b><small id="labDeltaTxt"></small></div>
+              <div class="kpi"><span>Equilíbrio no vencimento</span><b id="labBE"></b><small id="labBETxt"></small></div>
+            </div>
+            <p class="lab-read" id="labRead"></p>
+            <div class="lab-chart" id="labChartWrap"><canvas id="labChart" aria-label="Gráfico do resultado da opção por preço do ativo, no vencimento e hoje"></canvas></div>
+            <div class="lab-key"><span><i></i>Resultado no vencimento</span><span><i class="now"></i>Resultado hoje, se a posição fosse zerada pelo preço do modelo</span><span><i class="k"></i>Strike</span><span>Valores por opção, em R$</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card op-chain">
+        <div class="oc-h"><h4>A grade de strikes</h4><p>É assim que uma tela de negociação mostra as séries de um mesmo vencimento: calls à esquerda, puts à direita e o strike no meio. As células verdes estão dentro do dinheiro. As barras dividem o prêmio em valor intrínseco (verde) e extrínseco (azul). Toque numa opção para levá-la ao laboratório.</p></div>
+        <div class="scrollx" id="opChain"></div>
+        <p class="op-note">Grade ilustrativa: códigos e prêmios fictícios, calculados pelo modelo com o preço, o tempo, a volatilidade e os juros do laboratório.</p>
+      </div>
+      <div class="op-charts">
+        <figure class="card op-fig">
+          <figcaption><h4>O tempo corre contra o titular</h4><p>Prêmio de três calls, com o ativo parado, à medida que o vencimento chega. Fora do dinheiro, o prêmio vai a zero; dentro, encosta no valor intrínseco; no dinheiro, cai mais rápido perto do fim.</p></figcaption>
+          <div class="mc-wrap" id="opDecayWrap"><canvas id="opDecay" aria-label="Prêmio de três calls conforme os dias até o vencimento"></canvas></div>
+        </figure>
+        <figure class="card op-fig">
+          <figcaption><h4>A volatilidade encarece a opção</h4><p>Prêmio de uma call e de uma put no dinheiro, conforme a volatilidade. Mais oscilação é mais chance de terminar bem dentro do dinheiro, e o titular paga por essa chance.</p></figcaption>
+          <div class="mc-wrap" id="opVolcWrap"><canvas id="opVolc" aria-label="Prêmio de uma call e de uma put conforme a volatilidade"></canvas></div>
+        </figure>
+      </div>
+      </div>
+    </div>
+
+    <div class="op-ch" id="op-5">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="false" aria-controls="op-5-body"><span class="op-n">5</span><h3>Do lançamento ao exercício</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-5-body" hidden>
+      <ol class="op-steps">
+        <li class="card"><span class="st-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h11M4 11h11M4 16h6M18 13v8M14 17h8"/></svg></span><b>Abertura da série</b><p>A bolsa autoriza séries com strikes em torno do preço do ativo e vencimentos à frente. Alguns ativos também têm séries semanais.</p></li>
+        <li class="card"><span class="st-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l5 5L9 20H4v-5z"/><path d="M13 6l5 5"/></svg></span><b>Lançamento</b><p>Alguém vende uma opção que não tinha e cria o contrato. Quem comprou vira titular; quem vendeu vira lançador e deposita garantias, ou as próprias ações, na bolsa.</p></li>
+        <li class="card"><span class="st-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 4 5-7 4 5"/><path d="M3 21h18"/></svg></span><b>Negociação</b><p>Até o vencimento, o prêmio sobe e desce com o ativo, o tempo e a volatilidade. Dá para sair antes: o titular vende a opção, e o lançador a recompra.</p></li>
+        <li class="card"><span class="st-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 14v3"/></svg></span><b>Vencimento</b><p>Nas opções mensais de ações, é a terceira sexta-feira do mês. A opção que termina fora do dinheiro vence sem valor.</p></li>
+        <li class="card"><span class="st-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg></span><b>Exercício</b><p>Dentro do dinheiro, o titular exerce e a bolsa designa um lançador. O negócio é liquidado como uma compra e venda do ativo pelo strike.</p></li>
+      </ol>
+
+      <h4 class="op-sub">No vencimento: exercer ou vencer sem valor</h4>
+      <div class="exf">
+        <div class="card exf-col">
+          <div class="exf-q"><span class="op-tag call">Call</span>PETR4 terminou acima do strike (R$ 40,00)?</div>
+          <div class="exf-br">
+            <div class="exf-b yes"><em>Sim</em><p><b>É exercida.</b> O titular compra 100 ações por R$ 40,00 cada; o lançador designado entrega as ações.</p><p class="exf-r">Resultado do titular: (preço − strike − prêmio) × 100</p></div>
+            <div class="exf-b no"><em>Não</em><p><b>Vence sem valor.</b> Ninguém compra por R$ 40,00 o que vale menos. O titular perde o prêmio; o lançador fica com ele.</p></div>
+          </div>
+        </div>
+        <div class="card exf-col">
+          <div class="exf-q"><span class="op-tag put">Put</span>PETR4 terminou abaixo do strike (R$ 37,00)?</div>
+          <div class="exf-br">
+            <div class="exf-b yes"><em>Sim</em><p><b>É exercida.</b> O titular vende 100 ações por R$ 37,00 cada; o lançador designado compra as ações.</p><p class="exf-r">Resultado do titular: (strike − preço − prêmio) × 100</p></div>
+            <div class="exf-b no"><em>Não</em><p><b>Vence sem valor.</b> Ninguém vende por R$ 37,00 o que vale mais. O titular perde o prêmio; o lançador fica com ele.</p></div>
+          </div>
+        </div>
+      </div>
+      <p class="op-note">Na opção americana, o titular pode exercer antes do vencimento, mas em geral não compensa: vender a opção preserva o valor extrínseco que ainda existe. No vencimento, a B3 pode exercer automaticamente as posições dentro do dinheiro, conforme as regras vigentes, que também dizem como pedir para não exercer.</p>
+
+      <div class="card op-story">
+        <h4>Uma call do começo ao fim</h4>
+        <p>Você compra 1 lote de PETRJ400 quando faltam 15 dias úteis para o vencimento, com PETR4 a R$ 38,50. Acompanhe o prêmio pelo modelo enquanto o ativo anda. A trajetória de PETR4 é ilustrativa.</p>
+        <div class="story-grid">
+          <div class="story-charts">
+            <span class="story-lbl">PETR4 (R$)</span>
+            <div class="mc-wrap sm" id="opStorySWrap"><canvas id="opStoryS" aria-label="Preço de PETR4 dia a dia"></canvas></div>
+            <span class="story-lbl">Prêmio da PETRJ400 (R$) e valor intrínseco</span>
+            <div class="mc-wrap" id="opStoryPWrap"><canvas id="opStoryP" aria-label="Prêmio da PETRJ400 e valor intrínseco dia a dia"></canvas></div>
+          </div>
+          <ol class="story-beats" id="opStoryBeats"></ol>
+        </div>
+      </div>
+
+      <h4 class="op-sub">Resultado no vencimento, em reais</h4>
+      <div class="op-ex" id="opExamples"></div>
+      </div>
+    </div>
+
+    <div class="op-ch" id="op-6">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="false" aria-controls="op-6-body"><span class="op-n">6</span><h3>Estratégias básicas</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-6-body" hidden>
+      <p class="op-intro">Quatro usos comuns, com as opções do simulador e PETR4 a R$ 38,50. Os valores são por ação, no vencimento. São exemplos didáticos, não recomendação de investimento.</p>
+      <div class="op-strat" id="opStrat"></div>
+      </div>
+    </div>
+
+    <div class="op-ch" id="op-7">
+      <div class="op-ch-h" role="button" tabindex="0" aria-expanded="false" aria-controls="op-7-body"><span class="op-n">7</span><h3>Negociação e modelo</h3><span class="op-ch-chev" aria-hidden="true">▾</span></div>
+      <div class="op-ch-body" id="op-7-body" hidden>
+      <div class="op-split">
+        <div class="card op-block">
+          <h4>Como a opção é negociada</h4>
+          <ul class="op-list">
+            <li><b>No livro de ofertas</b>, como uma ação: ofertas de compra e de venda com preço e quantidade. O preço é o prêmio de uma opção e anda de R$ 0,01 em R$ 0,01; a quantidade anda em lotes de <span id="opLot">100</span> no simulador.</li>
+            <li><b>Horário no simulador</b>: <span id="opHours"></span>. As opções não entram no after-market do simulador. A B3 ajusta a grade horária ao longo do ano; confira a vigente.</li>
+            <li><b>Formadores de mercado</b> mantêm ofertas dos dois lados nas séries mais negociadas, para dar liquidez. No simulador, cada ativo tem dois.</li>
+            <li><b>Garantias</b>: o lançador descoberto deposita margem na bolsa, calculada pelo risco da posição; o coberto deixa as próprias ações depositadas.</li>
+            <li><b>Encerrar antes</b>: quem comprou vende a opção; quem vendeu a recompra. É o caminho mais comum, e preserva o valor extrínseco que ainda existe.</li>
+            <li><b>Proventos</b>: quando o ativo paga dividendos, o strike costuma ser ajustado, e o número do código pode deixar de bater com o preço.</li>
+            <li><b>Túneis</b>: o túnel de leilão da opção é assíncrono. <span id="opTun"></span> Por isso o preço de referência de uma opção muda mesmo sem ninguém negociar a opção: basta o ativo-objeto andar.</li>
+          </ul>
+          <div class="op-actions" id="opActions"></div>
+        </div>
+        <div class="card op-block">
+          <h4>O modelo de Black-Scholes</h4>
+          <p>O simulador calcula o prêmio teórico das opções pelo modelo de Black-Scholes, uma referência de mercado. Ele usa cinco números: o preço do ativo (<i>S</i>), o strike (<i>K</i>), o tempo até o vencimento (<i>T</i>), a taxa de juros (<i>r</i>) e a volatilidade (<i>σ</i>), que mede quanto o ativo costuma oscilar.</p>
+          <table class="op-eff">
+            <caption>O que faz o prêmio subir ou cair, com o resto parado</caption>
+            <thead><tr><th>Se…</th><th>Call</th><th>Put</th></tr></thead>
+            <tbody>
+              <tr><td>o ativo sobe</td><td class="up">sobe</td><td class="down">cai</td></tr>
+              <tr><td>o strike é maior</td><td class="down">cai</td><td class="up">sobe</td></tr>
+              <tr><td>falta mais tempo</td><td class="up">sobe</td><td class="up">em geral, sobe</td></tr>
+              <tr><td>a volatilidade aumenta</td><td class="up">sobe</td><td class="up">sobe</td></tr>
+              <tr><td>os juros sobem</td><td class="up">sobe</td><td class="down">cai</td></tr>
+            </tbody>
+          </table>
+          <p>Quatro desses números aparecem na tela. A volatilidade, não. A <b>histórica</b> mede quanto o ativo oscilou; a <b>implícita</b>, quanto o mercado espera que ele oscile, e sai do próprio prêmio: o mercado faz a conta ao contrário.</p>
+          <p>O <b>delta</b> mede quanto o prêmio anda para cada R$ 1 no ativo. Uma call fora do dinheiro tem delta pequeno em reais, mas grande em porcentagem: é a alavancagem que estoura a proteção no call da opção.</p>
+          <p>O modelo supõe volatilidade e juros constantes, exercício só no vencimento e nenhum provento. Na prática, o prêmio de mercado se afasta do teórico, e cada strike negocia com uma volatilidade implícita diferente.</p>
+          <div class="op-formula">
+            <p class="of-t">A fórmula</p>
+            <div class="fx" data-display data-tex="C = S\,N(d_1) - K\,e^{-rT}\,N(d_2)"></div>
+            <div class="fx" data-display data-tex="P = K\,e^{-rT}\,N(-d_2) - S\,N(-d_1)"></div>
+            <div class="fx" data-display data-tex="d_1 = \dfrac{\ln(S/K) + \left(r + \tfrac{\sigma^2}{2}\right)T}{\sigma\sqrt{T}}"></div>
+            <div class="fx" data-display data-tex="d_2 = d_1 - \sigma\sqrt{T} \qquad \Delta_{\text{call}} = N(d_1) \qquad \Delta_{\text{put}} = N(d_1) - 1"></div>
+            <p>N é a distribuição normal acumulada, <i>T</i> é o tempo em anos (no simulador, dias úteis ÷ 252), <i>r</i> é a taxa de juros e <i>σ</i> é a volatilidade anual.</p>
+            <p>Simplificações do simulador: <span id="opSimp"></span>.</p>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap page-sec" id="parametros" aria-labelledby="hParam" hidden>
+    <div class="sec-head">
+      <h2 class="page-h2" id="hParam">Parâmetros didáticos em uso</h2>
+      <p class="sec-lead">Valores que a simulação usa em cada grupo de ativos. Tudo fica editável no objeto CONFIG, no topo do código.</p>
+    </div>
+    <div class="card param-card"><div class="scrollx" id="paramBody"></div></div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-in">
+    <div class="foot-grid">
+      <div>
+        <h2 class="foot-h">Autoria</h2>
+        <p>Criado por <b>Matheus Ghirardo</b>, como projeto de estudo sobre o funcionamento do pregão da B3: túneis de negociação, leilões e opções.</p>
+        <p>Código em <a href="https://github.com/matheusrghirardo/negocia-o" target="_blank" rel="noopener">github.com/matheusrghirardo/negocia-o</a>.</p>
+      </div>
+      <div>
+        <h2 class="foot-h">Fontes</h2>
+        <p>As regras de túneis de negociação (rejeição, leilão e proteção), leilões, prorrogações, circuit breaker e opções foram estudadas nos materiais públicos da <a href="https://www.b3.com.br" target="_blank" rel="noopener">B3</a>.</p>
+        <p>Os parâmetros do simulador são aproximações didáticas dessas regras. Confira a versão oficial vigente antes de usar em aula.</p>
+        <p>As ilustrações, os gráficos e os diagramas são desenhos próprios, feitos em código para representar esses conceitos.</p>
+      </div>
+      <div>
+        <h2 class="foot-h">Ferramentas</h2>
+        <p>Feito com bibliotecas de código aberto: Vite (build), Geist e Geist Mono (fontes), Lucide (ícones) e KaTeX (fórmulas).</p>
+      </div>
+    </div>
+    <p class="foot-legal"><b>Projeto educativo independente, sem vínculo com a B3.</b> Ativos, preços e corretoras são fictícios. © 2026 Matheus Ghirardo.</p>
+  </div>
+</footer>
+
+<nav class="mtabs" id="mtabs" aria-label="Atalhos do simulador">
+  <button data-t="mercado">Mercado<span class="dot" id="dotMercado" hidden></span></button>
+  <button data-t="grafico">Gráfico</button>
+  <button data-t="livro">Livro</button>
+  <button data-t="eventos">Eventos</button>
+</nav>
+
+<div class="over" id="cbOver" hidden>
+  <div class="cbbox" role="alertdialog" aria-labelledby="cbTitle">
+    <h2 id="cbTitle">Circuit breaker</h2>
+    <p id="cbWhy"></p>
+    <div class="hatch"></div>
+    <div class="cd" id="cbCd">30:00</div>
+    <p id="cbNext"></p>
+    <p style="font-size:13px" id="cbLevels"></p>
+    <button class="btn" id="cbMin" style="margin-top:8px">Ver o mercado parado</button>
+  </div>
+</div>
+<button class="cb-mini" id="cbMini" hidden></button>
+<div class="over" id="modalOver" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+<div class="tour-ring" id="tourRing" hidden></div>
+<div class="tour" id="tour" hidden role="dialog" aria-live="polite"></div>
+<div class="toast" id="toast" hidden role="status"></div>
+<div class="ls-ring" id="lsRing" hidden></div>
+</body>
+</html>
