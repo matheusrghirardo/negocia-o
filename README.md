@@ -15,12 +15,18 @@ Ao salvar qualquer arquivo com o servidor ligado, a página se atualiza sozinha.
 
 O Node.js (v24 LTS) está instalado em `%LOCALAPPDATA%\Programs\nodejs` e no PATH do usuário. Terminais abertos antes da instalação precisam ser reabertos para enxergar o `npm`.
 
+### Sem servidor (outro computador, ambiente corporativo)
+
+Rode `npm run build` e leve a pasta `dist/` inteira. Nela, dois cliques em `index.html` abrem o site direto no navegador, sem Node nem servidor. O `index.html` precisa ficar junto das pastas `assets/` e `js/` que estão ao lado dele.
+
+Abrir o `index.html` da raiz do projeto com dois cliques não funciona: ele é a versão de desenvolvimento e depende do `npm run dev`.
+
 ## Comandos
 
 | Comando | O que faz |
 | --- | --- |
 | `npm run dev` | Servidor de desenvolvimento com recarga automática, em http://localhost:5173 |
-| `npm run build` | Gera a versão final otimizada em `dist/` |
+| `npm run build` | Gera em `dist/` a versão final, que abre com dois cliques no `index.html` (sem servidor) |
 | `npm run preview` | Serve a pasta `dist/` em http://localhost:4173, para conferir a versão final |
 
 ## Estrutura
