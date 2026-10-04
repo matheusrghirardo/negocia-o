@@ -3,47 +3,52 @@
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
-  --sans:"Geist Variable",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --prose:"Geist Variable",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --mono:"Geist Mono Variable",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* Fonte do sistema da Apple (San Francisco) nos aparelhos da Apple; onde ela não existe, a Geist embutida */
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue","Geist Variable","Segoe UI",system-ui,Roboto,sans-serif;
+  --prose:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue","Geist Variable","Segoe UI",system-ui,Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"Geist Mono Variable",Menlo,Consolas,monospace;
   --barH:58px; --headH:0px; --railW:380px; --gut:24px;
-  /* paleta moderna. Semântica fixa dos túneis:
-     dourado = túnel de leilão · magenta/vinho = rejeição · ciano/petróleo = proteção · índigo = preço médio */
-  --bg:#f2f5fa; --panel:#ffffff; --panel2:#f4f7fb; --line:#e2e8f0; --line2:#cbd5e1;
-  --text:#0b1424; --muted:#526078; --faint:#8793a7;
-  --up:#0f8a5f; --down:#d0344a; --amber:#b07408; --amber2:#cf8d17; --violet:#5b5bd6;
-  --rasp:#a3195b; --cyan:#0a8a96; --gray:#6b7789; --accent:#2f6bff;
-  --onacc:#ffffff; --onamb:#ffffff;
-  --amberA:rgba(176,116,8,.12); --raspA:rgba(163,25,91,.08); --cyanA:rgba(10,138,150,.12);
-  --glow1:rgba(47,107,255,.10); --glow2:rgba(176,116,8,.08);
-  --shadow:0 18px 40px -12px rgba(15,23,42,.22);
-  --cardShadow:0 1px 2px rgba(15,23,42,.04),0 14px 34px -22px rgba(15,23,42,.28);
+  /* Paleta clean: branco, preto e cinza. Cor só onde ela informa:
+     leilões (um tom por tipo), proteção, rejeição e alta/baixa. */
+  --bg:#f5f5f7; --panel:#ffffff; --panel2:#f5f5f7; --line:#e5e5ea; --line2:#d2d2d7;
+  --text:#1d1d1f; --muted:#6e6e73; --faint:#86868b;
+  --ink:#1d1d1f; --inkA:rgba(29,29,31,.06);
+  --up:#248a3d; --down:#d70015;
+  --amber:#b85c00; --amber2:#d97706; --violet:#5856d6; --brown:#8a5a2b; --blue:#0071e3;
+  --rasp:#d70015; --cyan:#00798a; --gray:#6e6e73; --accent:#1d1d1f;
+  --wall:#8e8e93; --onacc:#ffffff; --onamb:#ffffff;
+  --amberA:rgba(184,92,0,.10); --raspA:rgba(215,0,21,.07); --cyanA:rgba(0,121,138,.10); --brownA:rgba(138,90,43,.12);
+  --glow1:transparent; --glow2:transparent;
+  --shadow:0 12px 32px -14px rgba(0,0,0,.22);
+  --cardShadow:0 1px 2px rgba(0,0,0,.04);
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#060a12; --panel:#0c131f; --panel2:#121b2a; --line:#1a2436; --line2:#28364d;
-    --text:#e8edf5; --muted:#98a4b8; --faint:#5e6b81;
-    --up:#34d399; --down:#fb7185; --amber:#f2b84b; --amber2:#f7cd78; --violet:#a5b4fc;
-    --rasp:#f472b6; --cyan:#22d3ee; --gray:#94a3b8; --accent:#7aa2ff;
-    --onacc:#050b18; --onamb:#1b1200;
-    --amberA:rgba(242,184,75,.13); --raspA:rgba(244,114,182,.12); --cyanA:rgba(34,211,238,.12);
-    --glow1:rgba(122,162,255,.13); --glow2:rgba(242,184,75,.07);
-    --shadow:0 20px 48px -12px rgba(0,0,0,.7);
-    --cardShadow:inset 0 1px 0 rgba(255,255,255,.035),0 18px 40px -26px rgba(0,0,0,.9);
+    --bg:#000000; --panel:#1c1c1e; --panel2:#2c2c2e; --line:#38383a; --line2:#48484a;
+    --text:#f5f5f7; --muted:#a1a1a6; --faint:#6e6e73;
+    --ink:#f5f5f7; --inkA:rgba(245,245,247,.08);
+    --up:#30d158; --down:#ff453a;
+    --amber:#ff9f0a; --amber2:#ffb340; --violet:#7d7aff; --brown:#ac8e68; --blue:#0a84ff;
+    --rasp:#ff453a; --cyan:#40c8e0; --gray:#98989d; --accent:#f5f5f7;
+    --wall:#8e8e93; --onacc:#000000; --onamb:#000000;
+    --amberA:rgba(255,159,10,.14); --raspA:rgba(255,69,58,.12); --cyanA:rgba(64,200,224,.12); --brownA:rgba(172,142,104,.16);
+    --shadow:0 18px 44px -14px rgba(0,0,0,.85);
+    --cardShadow:none;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#060a12; --panel:#0c131f; --panel2:#121b2a; --line:#1a2436; --line2:#28364d;
-  --text:#e8edf5; --muted:#98a4b8; --faint:#5e6b81;
-  --up:#34d399; --down:#fb7185; --amber:#f2b84b; --amber2:#f7cd78; --violet:#a5b4fc;
-  --rasp:#f472b6; --cyan:#22d3ee; --gray:#94a3b8; --accent:#7aa2ff;
-  --onacc:#050b18; --onamb:#1b1200;
-  --amberA:rgba(242,184,75,.13); --raspA:rgba(244,114,182,.12); --cyanA:rgba(34,211,238,.12);
-  --glow1:rgba(122,162,255,.13); --glow2:rgba(242,184,75,.07);
-  --shadow:0 20px 48px -12px rgba(0,0,0,.7);
-  --cardShadow:inset 0 1px 0 rgba(255,255,255,.035),0 18px 40px -26px rgba(0,0,0,.9);
+  --bg:#000000; --panel:#1c1c1e; --panel2:#2c2c2e; --line:#38383a; --line2:#48484a;
+  --text:#f5f5f7; --muted:#a1a1a6; --faint:#6e6e73;
+  --ink:#f5f5f7; --inkA:rgba(245,245,247,.08);
+  --up:#30d158; --down:#ff453a;
+  --amber:#ff9f0a; --amber2:#ffb340; --violet:#7d7aff; --brown:#ac8e68; --blue:#0a84ff;
+  --rasp:#ff453a; --cyan:#40c8e0; --gray:#98989d; --accent:#f5f5f7;
+  --wall:#8e8e93; --onacc:#000000; --onamb:#000000;
+  --amberA:rgba(255,159,10,.14); --raspA:rgba(255,69,58,.12); --cyanA:rgba(64,200,224,.12); --brownA:rgba(172,142,104,.16);
+  --shadow:0 18px 44px -14px rgba(0,0,0,.85);
+  --cardShadow:none;
   color-scheme:dark;
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}

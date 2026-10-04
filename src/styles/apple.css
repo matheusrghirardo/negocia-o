@@ -1,0 +1,109 @@
+/* =========================================================================
+   Acabamento clean (estilo Apple): branco, preto e cinza.
+   Cor só onde ela informa: os tipos de leilão (um tom para cada), a proteção,
+   a rejeição e alta/baixa. Todo o resto usa tinta (--ink) e cinzas.
+   Este arquivo vem por último: neutraliza os usos decorativos de cor das
+   camadas anteriores sem mexer no que é informação.
+   ========================================================================= */
+body{background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+::selection{background:color-mix(in srgb,var(--ink) 18%,transparent)}
+
+/* links no texto: tinta com sublinhado discreto (azul só nos leilões do tipo call) */
+a{color:inherit}
+p a,li a,.foot-grid a,.ptab-src a,.sec-lead a,.grp-d a{text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px;text-decoration-thickness:1px}
+p a:hover,li a:hover,.foot-grid a:hover,.ptab-src a:hover,.sec-lead a:hover,.grp-d a:hover{text-decoration-color:currentColor}
+:focus-visible{outline-color:var(--ink)}
+
+/* barra de progresso, marca e botões */
+.scroll-prog{background:var(--ink)}
+.brand-mark{filter:none}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{box-shadow:none}
+.btn.primary:hover{background:color-mix(in srgb,var(--accent) 82%,var(--bg));border-color:color-mix(in srgb,var(--accent) 82%,var(--bg))}
+.seg button.on{box-shadow:none}
+.site-nav a.on{color:var(--text);background:var(--panel2)}
+.les-btn{border-color:var(--line2);color:var(--text)}
+.slowtag{color:var(--muted);border-color:var(--line2)}
+.chk input,.lab-f input[type=range]{accent-color:var(--ink)}
+
+/* abertura */
+.eyebrow{background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.eyebrow::before{background:var(--ink);box-shadow:none}
+.hero h1 .grad{background:none;-webkit-text-fill-color:currentColor;color:var(--muted)}
+.hero-fig::before{display:none}
+.hero-fig{border:1px solid var(--line);box-shadow:none}
+.hf .z-free{fill:var(--ink);fill-opacity:.04}
+
+/* mapa: o tom de alta/baixa fica mais discreto; o foco é tinta */
+.blk{background:color-mix(in srgb,var(--tint,var(--panel)) calc(var(--tp,0%) * .45),var(--panel))}
+.blk.focus{outline-color:var(--ink)}
+.blk:hover{box-shadow:none}
+.auc-strip.has{border-color:var(--line2);background:var(--panel2)}
+.auc-strip.has .strip-head{color:var(--text)}
+.phase[data-k="call"] i{background:var(--blue)}
+.phase[data-k="after"] i{background:var(--gray)}
+.phase[data-k="deriv"] i{background:var(--muted)}
+.chip.s-AFTER{color:var(--muted);border-color:var(--line2)}
+
+/* painéis e textos de apoio */
+.sec-h .note,.mo-msg{color:var(--muted)}
+.lim-note b{color:var(--text)}
+.bars .bw i{background:var(--ink)}
+.les-n{color:var(--faint)}
+.les-card::before{display:none}
+.les-card.done{border-color:var(--line2)}
+.les-card:hover,.op-term:hover,.g-card:hover,.st-card:hover,.fl-card:hover,.op-exc:hover{border-color:var(--faint);box-shadow:var(--shadow)}
+.ls-goal{background:var(--panel2)}
+.ls-goal b{color:var(--text)}
+.lq-k,.ls-kicker{color:var(--muted)}
+.lq-o:hover:not([disabled]){border-color:var(--ink)}
+.lesson{border-color:var(--line2);box-shadow:var(--shadow)}
+.ls-prog i.done{background:var(--ink);opacity:.35}
+.ls-prog i.on{background:var(--ink)}
+.ls-run{color:var(--text)}
+.ls-run i{background:var(--ink)}
+.ls-ring,.tour-ring{border-color:var(--ink)}
+@keyframes lsRing{0%,100%{box-shadow:0 0 0 2px var(--inkA)}50%{box-shadow:0 0 0 6px var(--inkA)}}
+.tour{border-color:var(--line2)}
+.mtabs button.on::after{background:var(--ink)}
+.br.own .bk{color:var(--blue)}
+.fi.own{box-shadow:inset 3px 0 0 var(--blue)}
+@keyframes bolPick{0%{box-shadow:0 0 0 3px var(--ink)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* guia de opções: tudo em tinta e cinza */
+.pf .pf-k{stroke:var(--ink)}
+.oc-p.hl{border-color:var(--ink);background:var(--inkA)}
+.oc-p.hl b{color:var(--text)}
+.oc-tab td.hl,.chain tr.atm td.k,.z.atm{background:var(--inkA);color:var(--text)}
+.lab-key i.k{border-top-color:var(--ink)}
+.lab-key i.now{border-top-color:var(--muted)}
+.st-ic,.op-n{background:var(--panel2);color:var(--text);box-shadow:none}
+.op-toc b{color:var(--muted)}
+.op-toc a:hover,.op-toc a.on{border-color:var(--ink);color:var(--text);background:var(--inkA)}
+.op-ch-h[aria-expanded="true"] .op-ch-chev{color:var(--text)}
+.fl .fl-m{stroke:var(--ink)} .fl .fl-mh{fill:var(--ink)} .fl .fl-l1.m{fill:var(--text)}
+.fl .fl-g{stroke:var(--muted)} .fl .fl-gh{fill:var(--muted)} .fl .fl-l1.g{fill:var(--muted)}
+.mny-axis span.k{color:var(--text)}
+.mny-mark{border-left-color:var(--ink)}
+.mny-mark span{color:var(--text)}
+.chain td.sel{box-shadow:inset 0 2px 0 var(--ink),inset 0 -2px 0 var(--ink);color:var(--text)}
+.kpi.main{border-color:var(--ink);background:var(--panel)}
+.cb .ex{background:color-mix(in srgb,var(--ink) 20%,transparent)}
+.story-beats li::before{background:var(--ink);color:var(--onacc)}
+
+/* aulas e leilões: níveis, progresso e notas sem cor decorativa */
+.les-lv,.les-lv.lv-1,.les-lv.lv-2,.les-lv.lv-3{color:var(--muted);border-color:var(--line2)}
+.lp-bar i{background:var(--ink)}
+.ls-b3{border-color:var(--line2);background:var(--panel2)}
+.ls-b3>b:first-child{color:var(--muted)}
+.lq-score.ok,.lq-score.no{background:var(--panel2)}
+.bt-k{background:var(--panel2);color:var(--text);border-color:var(--line2)}
+
+/* rejeição: a parede é cinza; o vermelho fica só para o aviso de oferta recusada */
+.k-rej{background:repeating-linear-gradient(135deg,var(--wall) 0 1.5px,transparent 1.5px 5px);border-bottom:2px solid var(--wall)}
+.hf .ph-bg,.hf .ph-ln{fill:var(--wall)}
+.hf .l-rej{stroke:var(--wall)}
+.hf .t-rej{fill:var(--muted)}
+.lg.rej i{border-color:var(--wall)}
+.bk-tun .rsp{color:var(--muted)}
+.bm-rej{stroke:var(--wall)}

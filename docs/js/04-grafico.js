@@ -22,7 +22,7 @@ const UI = {
 /* ----------------------------- cores ----------------------------- */
 function readPalette() {
   const cs = getComputedStyle(document.documentElement), P = {};
-  for (const k of ['bg', 'panel', 'panel2', 'line', 'line2', 'text', 'muted', 'faint', 'up', 'down', 'amber', 'amber2', 'violet', 'rasp', 'cyan', 'gray', 'accent', 'coral', 'onamb', 'onacc'])
+  for (const k of ['bg', 'panel', 'panel2', 'line', 'line2', 'text', 'muted', 'faint', 'up', 'down', 'amber', 'amber2', 'violet', 'rasp', 'cyan', 'gray', 'accent', 'brown', 'blue', 'ink', 'wall', 'onamb', 'onacc'])
     P[k] = cs.getPropertyValue('--' + k).trim() || '#888888';
   UI.pal = P; UI.patterns = {}; UI._rgba = {};
 }
@@ -44,21 +44,21 @@ function hatch(ctx, color, alpha, dpr) {
 
 /* ----------------------------- tipos de leilão: nome, cor e ícone -----------------------------
    Um vocabulário só para o gráfico, o painel, o mapa, a linha do tempo e o guia. Leilões de negócio têm cor
-   própria (dourado, índigo, cinza, laranja); calls ficam em azul, com borda tracejada. Ícones 16×16, só traço. */
+   própria (laranja, índigo, cinza, laranja); calls ficam em azul, com borda tracejada. Ícones 16×16, só traço. */
 const AUC_KIND = {
   ult:        { n: 'Último preço', full: 'Leilão por último preço', col: 'amber', call: false,
-                ico: 'M1.5 4h13M1.5 12h13M8 14.5v-9M5 8.5l3-3 3 3', how: 'o negócio sairia fora do tubo dourado' },
+                ico: 'M1.5 4h13M1.5 12h13M8 14.5v-9M5 8.5l3-3 3 3', how: 'o negócio sairia fora do tubo laranja' },
   med:        { n: 'Preço médio', full: 'Leilão por preço médio', col: 'violet', call: false,
                 ico: 'M1.5 4.5h2.5M6.7 4.5h2.6M12 4.5h2.5M1.5 11.5h2.5M6.7 11.5h2.6M12 11.5h2.5M2.5 8.8l3.6-2.4 3 3 4.4-3.4', how: 'o negócio se afastaria da média dos últimos negócios' },
   est:        { n: 'Estático', full: 'Leilão pelo túnel estático', col: 'gray', call: false,
                 ico: 'M2 4.5h.01M5.4 4.5h.01M8.7 4.5h.01M12 4.5h.01M14 4.5h.01M2 11.5h.01M5.4 11.5h.01M8.7 11.5h.01M12 11.5h.01M14 11.5h.01M8 6.5v3', how: 'o negócio passaria do limite fixo do dia' },
-  qtd:        { n: 'Quantidade', full: 'Leilão por quantidade', col: 'coral', call: false,
+  qtd:        { n: 'Quantidade', full: 'Leilão por quantidade', col: 'brown', call: false,
                 ico: 'M2 3.5h12M2 8h8.5M2 12.5h5', how: 'a oferta é grande demais, seja qual for o preço' },
-  call_open:  { n: 'Call de abertura', full: 'Call de abertura', col: 'accent', call: true,
+  call_open:  { n: 'Call de abertura', full: 'Call de abertura', col: 'blue', call: true,
                 ico: 'M1.5 12.5h13M4 12.5a4 4 0 0 1 8 0M8 3v2.2M3.2 6.2l1.5 1.5M12.8 6.2l-1.5 1.5', how: 'as ofertas se acumulam antes da abertura' },
-  call_close: { n: 'Call de fechamento', full: 'Call de fechamento', col: 'accent', call: true,
+  call_close: { n: 'Call de fechamento', full: 'Call de fechamento', col: 'blue', call: true,
                 ico: 'M4 14V2.5M4 3.5h8l-2 2.6 2 2.6H4', how: 'o preço de fechamento sai deste leilão' },
-  reopen:     { n: 'Reabertura', full: 'Call de reabertura (circuit breaker)', col: 'accent', call: true,
+  reopen:     { n: 'Reabertura', full: 'Call de reabertura (circuit breaker)', col: 'blue', call: true,
                 ico: 'M13.5 8a5.5 5.5 0 1 1-1.8-4.1M13.5 2.5v3.6h-3.6', how: 'o mercado volta de uma parada geral' }
 };
 const PRORR_KIND = { prot_preco: 'prot', prot_qtd: 'prot', alt60: 'alt', alt30: 'alt', alt15: 'alt', sem_teorico: 'none' };
@@ -375,7 +375,7 @@ function drawChart() {
   // futuro (à direita do agora)
   const xn = X(now);
   if (xn < x0 + pw) { ctx.fillStyle = rgba(P.panel2, 0.5); ctx.fillRect(xn, padT, x0 + pw - xn, ph); }
-  // túneis em camadas, como na régua: corredor livre → zona de leilão (dourado) → rejeição (vinho hachurado)
+  // túneis em camadas, como na régua: corredor livre → zona de leilão (laranja) → rejeição (cinza hachurado)
   const rLo = sh.rej ? buckets(h.rej, 0, t0, t1, now, X, x0, n) : null, rHi = sh.rej ? buckets(h.rej, 1, t0, t1, now, X, x0, n) : null;
   const uLo = sh.ult ? buckets(h.ult, 0, t0, t1, now, X, x0, n) : null, uHi = sh.ult ? buckets(h.ult, 1, t0, t1, now, X, x0, n) : null;
   if (sh.ult) {
@@ -386,11 +386,11 @@ function drawChart() {
   }
   // rejeição: área além do túnel hachurada
   if (sh.rej) {
-    ctx.fillStyle = rgba(P.rasp, 0.06);
+    ctx.fillStyle = rgba(P.wall, 0.07);
     fillBeyond(ctx, rHi, x0, Y, tick, padT, true); fillBeyond(ctx, rLo, x0, Y, tick, padT + ph, false);
-    ctx.fillStyle = hatch(ctx, P.rasp, 0.45, C.dpr);
+    ctx.fillStyle = hatch(ctx, P.wall, 0.4, C.dpr);
     fillBeyond(ctx, rHi, x0, Y, tick, padT, true); fillBeyond(ctx, rLo, x0, Y, tick, padT + ph, false);
-    ctx.strokeStyle = P.rasp; ctx.lineWidth = 2; lineB(ctx, rHi, x0, Y, tick); lineB(ctx, rLo, x0, Y, tick);
+    ctx.strokeStyle = P.wall; ctx.lineWidth = 2; lineB(ctx, rHi, x0, Y, tick); lineB(ctx, rLo, x0, Y, tick);
   }
   if (sh.est) {
     ctx.strokeStyle = P.gray; ctx.lineWidth = 2; ctx.setLineDash([1.5, 3.5]); ctx.lineCap = 'round';
@@ -416,7 +416,7 @@ function drawChart() {
   // boleta: nível digitado
   if (UI.bol.pT != null && UI.bol.type === LMT) {
     const y = Y(UI.bol.pT * tick);
-    if (y > padT && y < padT + ph) { ctx.strokeStyle = P.accent; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + pw, y); ctx.stroke(); ctx.setLineDash([]); }
+    if (y > padT && y < padT + ph) { ctx.strokeStyle = P.blue; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + pw, y); ctx.stroke(); ctx.setLineDash([]); }
   }
   ctx.restore();
 
@@ -530,7 +530,7 @@ function drawTunnelTags(ctx, i, X, Y, x0, pw, padT, ph, now) {
       L.push({ y, ty: y - up * 11, txt: `${name} ${fp(i, v)}`, col, strong });
     }
   };
-  if (anyB) add(sh.rej, t.rej, after ? 'After ±2%' : 'Rejeição', P.rasp);
+  if (anyB) add(sh.rej, t.rej, after ? 'After ±2%' : 'Rejeição', P.wall);
   if (anyB && !after) add(sh.est, t.est, 'Estático', P.gray);
   if (live) { add(sh.med, t.med, 'Preço médio', P.violet); add(sh.ult, t.ult, 'Túnel de leilão', P.amber, true); }
   if (inAuctionLike(i)) add(sh.prot, i.auction.prot, 'Proteção', P.cyan, true);
@@ -592,7 +592,7 @@ function drawEdgeTags(ctx, i, ymin, ymax, x0, pw, padT, ph) {
   const add = (on, v, name, col) => { if (!on || v == null) return; const p = v * tick; if (p > ymax) top.push({ v, name, col }); else if (p < ymin) bot.push({ v, name, col }); };
   const live = i.state === ST.CONT, anyB = i.state !== ST.PRE && i.state !== ST.CLOSED;
   if (anyB) {
-    add(sh.rej, t.rej && t.rej.hi, i.state === ST.AFTER ? 'After ±2%' : 'Rejeição', P.rasp); add(sh.rej, t.rej && t.rej.lo, i.state === ST.AFTER ? 'After ±2%' : 'Rejeição', P.rasp);
+    add(sh.rej, t.rej && t.rej.hi, i.state === ST.AFTER ? 'After ±2%' : 'Rejeição', P.muted); add(sh.rej, t.rej && t.rej.lo, i.state === ST.AFTER ? 'After ±2%' : 'Rejeição', P.muted);
     add(sh.est && i.state !== ST.AFTER, t.est && t.est.hi, 'Estático', P.gray); add(sh.est && i.state !== ST.AFTER, t.est && t.est.lo, 'Estático', P.gray);
   }
   if (live) { add(sh.med, t.med && t.med.hi, 'Preço médio', P.violet); add(sh.med, t.med && t.med.lo, 'Preço médio', P.violet); add(sh.ult, t.ult && t.ult.hi, 'Leilão', P.amber); add(sh.ult, t.ult && t.ult.lo, 'Leilão', P.amber); }
@@ -616,7 +616,7 @@ function showTip(i, t, x, y, W, H) {
     row(P.amber, 'Leilão: último preço', h.ult, baseMethodName(i));
     row(P.violet, 'Leilão: preço médio', h.med, `média de ${vwSecOf(i)} s`);
     row(P.gray, 'Estático', h.est, 'fechamento anterior');
-    row(P.rasp, 'Rejeição', h.rej, i.isOpt ? 'referência, choque alto' : baseMethodName(i));
+    row(P.wall, 'Rejeição', h.rej, i.isOpt ? 'referência, choque alto' : baseMethodName(i));
     const a = i.auctions.find(a => a.t0 <= tt && (a.ended ? a.t1 >= tt : true));
     if (a) {
       const th = a.theoS.at(tt);
@@ -677,11 +677,11 @@ function drawRegua() {
   const Yv = v => Yp(pct(v));
   const yGu = Yv(U.hi), yGd = Yv(U.lo), yWu = Yv(t.rej.hi), yWd = Yv(t.rej.lo);
   // zonas
-  ctx.fillStyle = hatch(ctx, P.rasp, 0.4, C.dpr); ctx.fillRect(0, 0, W, yWu); ctx.fillRect(0, yWd, W, H - yWd);
+  ctx.fillStyle = hatch(ctx, P.wall, 0.4, C.dpr); ctx.fillRect(0, 0, W, yWu); ctx.fillRect(0, yWd, W, H - yWd);
   if (!after) { ctx.fillStyle = rgba(UC, 0.09); ctx.fillRect(0, yWu, W, yGu - yWu); ctx.fillRect(0, yGd, W, yWd - yGd); }
   // paredes de rejeição
-  ctx.fillStyle = P.rasp; ctx.fillRect(0, yWu - 1.5, W, 3); ctx.fillRect(0, yWd - 1.5, W, 3);
-  // portão dourado (túnel de leilão): abre/fecha
+  ctx.fillStyle = P.wall; ctx.fillRect(0, yWu - 1.5, W, 3); ctx.fillRect(0, yWd - 1.5, W, 3);
+  // portão laranja (túnel de leilão): abre/fecha
   const gateTarget = inA ? 1 : 0; UI.gate.v += (gateTarget - UI.gate.v) * (UI.reduced ? 1 : 0.12);
   if (!after) {
     ctx.strokeStyle = UC; ctx.lineWidth = 2.5;
@@ -703,7 +703,7 @@ function drawRegua() {
   ctx.font = (small ? '10px ' : '11px ') + FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
   const lab = (v, y, col, above) => { ctx.fillStyle = col; ctx.fillText(distLbl(i, v, UI.reg.base), W - 3, y + (above ? -7 : 7)); };
   if (!after) { lab(U.hi, yGu, UC, true); lab(U.lo, yGd, UC, false); }
-  lab(t.rej.hi, yWu, P.rasp, true); lab(t.rej.lo, yWd, P.rasp, false);
+  lab(t.rej.hi, yWu, P.muted, true); lab(t.rej.lo, yWd, P.muted, false);
   // proteção e teórico no leilão
   if (inA) {
     const a = i.auction, y1 = Yv(a.prot.hi), y2 = Yv(a.prot.lo);
@@ -724,9 +724,9 @@ function drawRegua() {
   if (!inA) { tri(bb, P.up, 1); tri(ba, P.down, 1); }
   // nível digitado na boleta
   if (UI.bol.pT != null && UI.bol.type === LMT) {
-    const y = clamp(Yv(UI.bol.pT), 3, H - 3); ctx.strokeStyle = P.accent; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    const y = clamp(Yv(UI.bol.pT), 3, H - 3); ctx.strokeStyle = P.blue; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = P.accent; ctx.textAlign = 'left'; ctx.fillText(small ? 'você' : 'sua oferta', 3, y + 8);
+    ctx.fillStyle = P.blue; ctx.textAlign = 'left'; ctx.fillText(small ? 'você' : 'sua oferta', 3, y + 8);
   }
   // título do estado
   ctx.textAlign = 'center'; ctx.font = '600 ' + (small ? '10px ' : '11px ') + FONT;
@@ -750,8 +750,8 @@ function drawParticles(ctx, i, W, H, Yv, yGu, yGd, yWu, yWd, rnow, small) {
     const k = Math.min(1, age / fly), e = easeOut(k);
     let x = W + 4 - (W + 4 - sx) * e, y = y0 + (ty - y0) * e;
     if (age <= fly) {
-      ctx.fillStyle = p.own ? P.accent : col; ctx.beginPath(); ctx.arc(x, y, p.own ? 4 : 3, 0, 7); ctx.fill();
-      ctx.strokeStyle = rgba(p.own ? P.accent : col, 0.35); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 10, y + (y0 - ty) * 0.06); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = p.own ? P.blue : col; ctx.beginPath(); ctx.arc(x, y, p.own ? 4 : 3, 0, 7); ctx.fill();
+      ctx.strokeStyle = rgba(p.own ? P.blue : col, 0.35); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 10, y + (y0 - ty) * 0.06); ctx.lineTo(x, y); ctx.stroke();
     } else {
       const f = 1 - (age - fly) / tail;
       if (label) {
@@ -761,7 +761,7 @@ function drawParticles(ctx, i, W, H, Yv, yGu, yGd, yWu, yWd, rnow, small) {
       } else if (p.out === 'auc') {
         ctx.fillStyle = rgba(P.amber, f); ctx.beginPath(); ctx.arc(sx, ty, 3, 0, 7); ctx.fill();
       } else {
-        ctx.strokeStyle = rgba(p.own ? P.accent : col, f); ctx.lineWidth = p.out === 'trade' ? 3 : 2;
+        ctx.strokeStyle = rgba(p.own ? P.blue : col, f); ctx.lineWidth = p.out === 'trade' ? 3 : 2;
         ctx.beginPath(); ctx.moveTo(sx - 6, ty); ctx.lineTo(sx + (p.out === 'trade' ? 12 : 6), ty); ctx.stroke();
       }
     }
@@ -777,7 +777,7 @@ function drawDaybar() {
   const a = T.fPre, b = DAY('18:30'), X = t => 1 + (t - a) / (b - a) * (W - 2), by = H - 11, bh = 8;
   const segs = [[T.fPre, T.fOpen, 'call'], [T.fOpen, T.preOpen, 'deriv'], [T.preOpen, T.open, 'call'], [T.open, T.closeCall, 'cont'], [T.closeCall, T.close, 'call'],
     [T.close, T.afterStart, 'closed'], [T.afterStart, T.afterEnd, CONFIG.schedule.afterMarket.enabled ? 'after' : 'closed'], [T.afterEnd, T.fClose, 'deriv'], [T.fClose, b, 'closed']];
-  const col = { call: P.amber, deriv: P.accent, cont: P.up, closed: P.line2, after: P.violet };
+  const col = { call: P.blue, deriv: P.faint, cont: P.up, closed: P.line2, after: P.gray };
   for (const s of segs) { ctx.fillStyle = rgba(col[s[2]], s[2] === 'closed' ? 0.8 : 0.55); ctx.fillRect(X(s[0]), by, Math.max(1, X(s[1]) - X(s[0]) - 1), bh); }
   for (const c of (E.cbLog || [])) { const e1 = c.t1 != null ? c.t1 : E.t; ctx.fillStyle = hatch(ctx, P.gray, 0.9, C.dpr); ctx.fillRect(X(c.t0), by - 2, Math.max(2, X(e1) - X(c.t0)), bh + 4); }
   ctx.font = '10px ' + FONT; ctx.fillStyle = P.faint; ctx.textBaseline = 'bottom'; ctx.textAlign = 'center';

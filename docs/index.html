@@ -6,8 +6,8 @@
 <title>Simulador dos túneis de negociação da B3</title>
 <meta name="description" content="Simulação educativa de um pregão com os túneis de rejeição, leilão e proteção da B3, aulas guiadas e um guia ilustrado de opções. Dados fictícios.">
 <meta name="author" content="Matheus Ghirardo">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0e1521" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:title" content="Simulador dos túneis de negociação da B3">
@@ -29,7 +29,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
 <script defer src="./js/04-grafico.js"></script>
 <script defer src="./js/05-interface.js"></script>
 <script defer src="./js/06-aula-guiada.js"></script>
-  <link rel="stylesheet" href="./assets/style-CC75_SpR.css">
+  <link rel="stylesheet" href="./assets/style-CIc750Dd.css">
 </head>
 <body>
 <div class="scroll-prog" id="scrollProg" aria-hidden="true"></div>
@@ -59,7 +59,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
     <figure class="card hero-fig">
       <div class="fig-top"><span>O que o gráfico mostra</span><span>ilustração fora de escala</span></div>
       <svg class="hf" viewBox="0 0 560 300" role="img" aria-labelledby="hfTitle">
-        <title id="hfTitle">Ilustração: o preço anda em degraus dentro do túnel de leilão dourado; acima e abaixo ficam as zonas de rejeição, hachuradas em vinho. Um negócio além do túnel abre um bloco de leilão com a faixa de proteção, e depois os túneis se recentralizam.</title>
+        <title id="hfTitle">Ilustração: o preço anda em degraus dentro do túnel de leilão laranja; acima e abaixo ficam as zonas de rejeição, hachuradas em cinza. Um negócio além do túnel abre um bloco de leilão com a faixa de proteção, e depois os túneis se recentralizam.</title>
         <defs><pattern id="hfHatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect class="ph-bg" width="7" height="7"/><rect class="ph-ln" width="1.6" height="7"/></pattern></defs>
         <rect fill="url(#hfHatch)" x="0" y="0" width="392" height="64"/>
         <rect fill="url(#hfHatch)" x="392" y="0" width="168" height="28"/>
@@ -91,8 +91,8 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
         <text class="t-prot t-min" x="305" y="186">proteção</text>
       </svg>
       <figcaption class="fig-key">
-        <div><b><i class="k-ult"></i>Túnel de leilão</b>Um negócio além do tubo dourado não sai: o ativo entra em leilão.</div>
-        <div><b><i class="k-rej"></i>Túnel de rejeição</b>Compra acima ou venda abaixo da linha vinho nem entra no livro.</div>
+        <div><b><i class="k-ult"></i>Túnel de leilão</b>Um negócio além do tubo laranja não sai: o ativo entra em leilão.</div>
+        <div><b><i class="k-rej"></i>Túnel de rejeição</b>Compra acima ou venda abaixo da linha cinza nem entra no livro.</div>
         <div><b><i class="k-prot"></i>Proteção</b>Se o preço teórico terminar fora da faixa, o leilão é prorrogado.</div>
       </figcaption>
     </figure>
@@ -277,7 +277,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
       <p class="op-def">Uma <b>opção</b> é um contrato que dá a quem compra, o <b>titular</b>, o direito de comprar ou de vender um ativo por um preço combinado, o <b>strike</b>, até uma data, o <b>vencimento</b>. É um direito, não uma obrigação. Quem vende a opção, o <b>lançador</b>, recebe à vista um valor por isso, o <b>prêmio</b>, e fica com a obrigação de cumprir o negócio se o titular exercer.</p>
       <h4 class="op-sub">Quem paga o quê</h4>
       <div class="op-flow" id="opFlow"></div>
-      <div class="fl-key"><span><i style="border-color:var(--amber)"></i>dinheiro</span><span><i style="border-color:var(--accent)"></i>direito ou ações</span><span>Exemplo com 1 lote e os prêmios de fechamento do simulador.</span></div>
+      <div class="fl-key"><span><i style="border-color:var(--ink)"></i>dinheiro</span><span><i style="border-color:var(--muted)"></i>direito ou ações</span><span>Exemplo com 1 lote e os prêmios de fechamento do simulador.</span></div>
       <div class="op-pair">
         <article class="card op-card">
           <div class="op-top"><span class="op-tag call">Call</span><span class="op-kind">opção de compra</span></div>

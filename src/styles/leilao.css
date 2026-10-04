@@ -4,12 +4,8 @@
    com borda tracejada. Cores nunca são o único sinal: todo tipo também
    tem ícone e nome.
    ========================================================================= */
-:root{ --coral:#c2410c; --coralA:rgba(194,65,12,.12) }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --coral:#fb923c; --coralA:rgba(251,146,60,.14) } }
-:root[data-theme="dark"]{ --coral:#fb923c; --coralA:rgba(251,146,60,.14) }
-
-.ak-ult{--kc:var(--amber)} .ak-med{--kc:var(--violet)} .ak-est{--kc:var(--gray)} .ak-qtd{--kc:var(--coral)}
-.ak-call_open,.ak-call_close,.ak-reopen{--kc:var(--accent)}
+.ak-ult{--kc:var(--amber)} .ak-med{--kc:var(--violet)} .ak-est{--kc:var(--gray)} .ak-qtd{--kc:var(--brown)}
+.ak-call_open,.ak-call_close,.ak-reopen{--kc:var(--blue)}
 
 /* ícones de traço (16×16) */
 .ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}

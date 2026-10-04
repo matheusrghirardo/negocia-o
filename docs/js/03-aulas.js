@@ -105,7 +105,7 @@ function endText(i, a) {
 }
 function recenterText(i) {
   const u = i.tun.ult || i.tun.med; if (!u || i.state !== ST.CONT) return '';
-  return `<br>Os túneis se recentralizaram: ${i.tun.ult ? 'o tubo dourado' : 'o túnel de preço médio'} agora vai de ${LB(fp(i, u.lo))} a ${LB(fp(i, u.hi))}, em torno de ${fpr(i, u.c)}.`;
+  return `<br>Os túneis se recentralizaram: ${i.tun.ult ? 'o tubo laranja' : 'o túnel de preço médio'} agora vai de ${LB(fp(i, u.lo))} a ${LB(fp(i, u.hi))}, em torno de ${fpr(i, u.c)}.`;
 }
 /* oferta tardia (aula de alteração) */
 function lateOrder(c, side) {
@@ -138,14 +138,14 @@ function clastOf(i) {
 }
 const protNews = () => Math.round((CG().IBOV.protAuction.pct + 0.035) * 1000) / 1000;   // notícia maior que a proteção do leilão
 const RUN_AUC = { until: lesStarted, max: 30 };
-const RUN_END = { until: lesEnded, max: 900, watch: 'No gráfico, acompanhe a linha dourada pontilhada (o preço teórico) e a faixa verde-petróleo (a proteção).' };
+const RUN_END = { until: lesEnded, max: 900, watch: 'No gráfico, acompanhe a linha laranja pontilhada (o preço teórico) e a faixa verde-petróleo (a proteção).' };
 const RUN_PRORR1 = { until: c => lesNProrr(c) >= 1 || lesEnded(c), max: 900, watch: 'No fim previsto, o sistema confere a proteção e as alterações de última hora.' };
 
 /* Cada aula: goal (o que a pessoa vai ver), steps, recap (resumo) e quiz (teste rápido com os números do pregão).
    O passo final "Resumo da aula" é acrescentado automaticamente no fim da lista. */
 const LESSONS = [
   /* ------------------------------ OS TÚNEIS ------------------------------ */
-  { id: 'rej', grp: 'tuneis', title: 'Túnel de rejeição', sub: 'O dedo gordo esbarra na parede vinho',
+  { id: 'rej', grp: 'tuneis', title: 'Túnel de rejeição', sub: 'O dedo gordo esbarra na parede cinza',
     level: 'Básico', mins: 3,
     b3: () => `Na tabela de ações da B3 (18/03/2026), a rejeição é de <b>±${pctTxt(CG().IBOV.rej.pct)}%</b> para todo o mercado à vista. Nos futuros ela é bem mais estreita: <b>±${pctTxt(CG().WIN.rej.pct)}%</b> no mini índice, <b>±${pctTxt(CG().WDO.rej.pct)}%</b> no mini dólar e <b>±${bps(CG().DI1.rej)} pontos-base</b> no DI, sempre em torno do preço-base. A quantidade máxima por oferta também rejeita: ${fq(CONFIG.instruments.find(x => x.ticker === 'WINV26').qtyReject)} contratos no mini índice.`,
     quiz2: () => ({
@@ -155,17 +155,17 @@ const LESSONS = [
     goal: 'a diferença entre recusar uma oferta na entrada e abrir um leilão no negócio.',
     seed: 103, start: '10:16:00', focus: 'PETR4', quiet: ['PETR4'], gap: { tk: 'B3SA3', pct: 0.012 },
     steps: [
-      { t: 'A área vinho', hl: ['chartWrap', 'reguaWrap'], enter: () => lesSetFull(true),
-        x: c => { const i = c.i, r = i.tun.rej, u = i.tun.ult; return `A área hachurada em vinho fica além do ${LB('túnel de rejeição')}: ${pctSpec(i.g.rej)} sobre o preço-base de PETR4 (${fpr(i, r.c)}), de ${LB(fp(i, r.lo))} a ${LB(fp(i, r.hi))}. É bem mais largo que o tubo dourado, que vai de ${fp(i, u.lo)} a ${fp(i, u.hi)}; para caber tudo, o gráfico está em escala completa.<br>Ele age na ${LB('entrada da oferta')}: compra acima do limite superior ou venda abaixo do inferior é recusada na hora. Serve para barrar erro de digitação, o dedo gordo.`; },
+      { t: 'A área cinza', hl: ['chartWrap', 'reguaWrap'], enter: () => lesSetFull(true),
+        x: c => { const i = c.i, r = i.tun.rej, u = i.tun.ult; return `A área hachurada em cinza fica além do ${LB('túnel de rejeição')}: ${pctSpec(i.g.rej)} sobre o preço-base de PETR4 (${fpr(i, r.c)}), de ${LB(fp(i, r.lo))} a ${LB(fp(i, r.hi))}. É bem mais largo que o tubo laranja, que vai de ${fp(i, u.lo)} a ${fp(i, u.hi)}; para caber tudo, o gráfico está em escala completa.<br>Ele age na ${LB('entrada da oferta')}: compra acima do limite superior ou venda abaixo do inferior é recusada na hora. Serve para barrar erro de digitação, o dedo gordo.`; },
         btn: 'Digitar uma compra a 10 vezes o preço',
         go: c => { const i = c.i; c.d.ff = c.E.submit(i, { side: 1, type: LMT, p: i.refT() * 10, q: 1000, br: 'Corretora 33', tag: 'dedo gordo' }); } },
       { t: 'Recusada na entrada', hl: ['chartWrap', 'reguaWrap'],
-        x: c => { const i = c.i, o = c.d.ff.o; return `A compra de 1.000 ações a ${LB(fpr(i, o.p))} passou do limite superior de rejeição (${fpr(i, i.tun.rej.hi)}) e foi ${LB('recusada')}. Ela não entrou no livro, não negociou e não mexeu no preço: PETR4 continua em ${fpr(i, i.refT())}.<br>No gráfico, a faísca vinho marca a recusa; na régua, a oferta bate na parede vinho e volta.`; },
+        x: c => { const i = c.i, o = c.d.ff.o; return `A compra de 1.000 ações a ${LB(fpr(i, o.p))} passou do limite superior de rejeição (${fpr(i, i.tun.rej.hi)}) e foi ${LB('recusada')}. Ela não entrou no livro, não negociou e não mexeu no preço: PETR4 continua em ${fpr(i, i.refT())}.<br>No gráfico, a faísca vermelha marca a recusa; na régua, a oferta bate na parede cinza e volta.`; },
         btn: 'Comprar com limite 5% acima',
         go: c => { const i = c.i; markTrades(c); c.d.lim = Math.round(i.refT() * 1.05); c.d.buy = c.E.submit(i, { side: 1, type: LMT, p: c.d.lim, q: 1000, br: 'Corretora 33', tag: 'compra' }); c.d.fills = newTrades(c); } },
       { t: 'Aceita: vale o preço do negócio', hl: ['chartWrap'],
         x: c => { const i = c.i, f = c.d.fills || [], q = f.reduce((s, x) => s + x.q, 0);
-          return `A compra com limite ${LB(fpr(i, c.d.lim))} ficou acima do tubo dourado, mas dentro da rejeição: foi ${LB('aceita')}. ` +
+          return `A compra com limite ${LB(fpr(i, c.d.lim))} ficou acima do tubo laranja, mas dentro da rejeição: foi ${LB('aceita')}. ` +
             (f.length ? `Ela negociou ${fq(q)} ações ${LB(tradeRange(i, f))}, com as vendas que já estavam no livro, dentro do tubo. Por isso não houve leilão.` : 'Ela entrou no livro, esperando um vendedor.') +
             `<br>São duas perguntas diferentes: o túnel de rejeição olha o ${LB('preço da oferta')}; o túnel de leilão olha o ${LB('preço do negócio')}.`; },
         btn: 'Testar o limite de quantidade',
@@ -176,7 +176,7 @@ const LESSONS = [
     recap: () => [
       'O túnel de rejeição confere cada oferta na entrada: compra acima do limite superior ou venda abaixo do inferior é recusada.',
       'Oferta recusada não entra no livro e não mexe no preço.',
-      'Uma oferta aceita ainda pode abrir leilão: quem decide é o preço do negócio, no tubo dourado.'
+      'Uma oferta aceita ainda pode abrir leilão: quem decide é o preço do negócio, no tubo laranja.'
     ],
     quiz: c => { const i = c.i, r = i.tun.rej, p = Math.max(1, r.lo - Math.round((r.hi - r.lo) * 0.05)); return {
       q: `Com o túnel de rejeição de ${fp(i, r.lo)} a ${fp(i, r.hi)}, chega uma venda a ${fpr(i, p)}. O que acontece?`,
@@ -185,24 +185,24 @@ const LESSONS = [
 
   { id: 'base', grp: 'tuneis', title: 'Preço-base: o centro do túnel', sub: 'LTP nas ações, most recent nos futuros e o C-LAST',
     level: 'Básico', mins: 4,
-    goal: 'de onde vem o centro de cada túnel, e por que o tubo dourado de uma ação anda a cada negócio, enquanto o de um futuro anda em degraus.',
+    goal: 'de onde vem o centro de cada túnel, e por que o tubo laranja de uma ação anda a cada negócio, enquanto o de um futuro anda em degraus.',
     seed: 111, start: '10:16:00', focus: 'PETR4', quiet: ['PETR4', 'WINV26'], gap: { tk: 'B3SA3', pct: 0.012 },
     b3: () => `A tabela de ações da B3 (18/03/2026) usa o <b>LTP</b> como preço-base de todo o mercado à vista, inclusive ETF. Nas planilhas de futuros (2026), o centro dos túneis de rejeição e de leilão é o <b>most recent</b>, e o <b>C-LAST</b> aparece em contratos de vencimentos mais longos. Nos demais vencimentos de um contrato, a B3 define um <b>pivô</b> (o vencimento mais líquido) e atualiza o centro por tempo, por percentual de oscilação ou pelo diferencial entre os ajustes.`,
     steps: [
       { t: 'LTP: o último negócio', hl: ['chartWrap', 'panelBox'],
-        x: c => { const i = c.i; return `PETR4 usa o preço-base ${LB('LTP')} (last traded price): o ${LB('último preço negociado')}. Agora é ${LB(fpr(i, i.refT()))}, e o centro do tubo dourado está exatamente nele. Antes do primeiro negócio do dia, vale o fechamento anterior.<br>Vamos fazer um negócio pequeno, comprando dos dois melhores vendedores.`; },
+        x: c => { const i = c.i; return `PETR4 usa o preço-base ${LB('LTP')} (last traded price): o ${LB('último preço negociado')}. Agora é ${LB(fpr(i, i.refT()))}, e o centro do tubo laranja está exatamente nele. Antes do primeiro negócio do dia, vale o fechamento anterior.<br>Vamos fazer um negócio pequeno, comprando dos dois melhores vendedores.`; },
         btn: 'Comprar dos melhores vendedores',
         go: c => { const i = c.i, A = i.asks; c.d.c0 = i.tun.ult.c; c.d.L0 = i.refT(); c.E.submit(i, { side: 1, type: LMT, p: A[1].p, q: A[0].qty + i.lot, br: 'Corretora 33', tag: 'compra' }); } },
       { t: 'O centro andou com o negócio', hl: ['chartWrap'],
-        x: c => { const i = c.i, u = i.tun.ult, n = LESSONS.findIndex(l => l.id === 'med') + 1; return `O último preço foi de ${fpr(i, c.d.L0)} para ${LB(fpr(i, i.refT()))}, e o centro do tubo foi de ${fp(i, c.d.c0)} para ${LB(fp(i, u.c))}. Com LTP, ${LB('o túnel anda a cada negócio')}.<br>É por isso que um passo pequeno nunca estoura o tubo dourado. E é por isso que existe o túnel de preço médio (aula ${n}), que lembra os negócios dos últimos ${CONFIG.vwapWindowSec} s.`; },
+        x: c => { const i = c.i, u = i.tun.ult, n = LESSONS.findIndex(l => l.id === 'med') + 1; return `O último preço foi de ${fpr(i, c.d.L0)} para ${LB(fpr(i, i.refT()))}, e o centro do tubo foi de ${fp(i, c.d.c0)} para ${LB(fp(i, u.c))}. Com LTP, ${LB('o túnel anda a cada negócio')}.<br>É por isso que um passo pequeno nunca estoura o tubo laranja. E é por isso que existe o túnel de preço médio (aula ${n}), que lembra os negócios dos últimos ${CONFIG.vwapWindowSec} s.`; },
         btn: 'Ver o mini índice (um futuro)' },
       { t: 'Most recent: o centro anda em degraus', hl: ['chartWrap', 'panelBox'], focus: 'WINV26',
         x: c => { const w = c.E.by.WINV26; return `Agora o foco é o mini índice (WINV26). Nos futuros o preço-base é o ${LB('most recent')}: o último negócio ou o preço de referência (aqui, o meio entre a melhor compra e a melhor venda), o que tiver sido atualizado por último.<br>E o centro do túnel de leilão não segue cada negócio: só se mexe a cada ${LB(CONFIG.futuresCenter.everySec + ' s')} ou quando o preço anda metade da meia-largura. Agora o centro está em ${LB(fpr(w, w.tun.ult.c))}.`; },
         btn: 'Mexer o preço e esperar',
         go: c => { const E = c.E, w = E.by.WINV26; c.d.w0 = w.refT(); c.d.wc0 = w.tun.ult.c; c.d.wt0 = E.t; c.d.wf0 = w.fut.t; E.doNews(w, 1, 0.0015); E.updateFV(0); },
-        run: { until: c => c.E.t >= c.d.wf0 + CONFIG.futuresCenter.everySec + 2, max: 120, watch: 'O preço de WINV26 anda, mas o centro do tubo dourado espera o prazo de atualização.' } },
+        run: { until: c => c.E.t >= c.d.wf0 + CONFIG.futuresCenter.everySec + 2, max: 120, watch: 'O preço de WINV26 anda, mas o centro do tubo laranja espera o prazo de atualização.' } },
       { t: 'O centro deu um degrau', hl: ['chartWrap'], focus: 'WINV26',
-        x: c => { const w = c.E.by.WINV26, c1 = w.tun.ult.c; return `Em ${fnum(c.E.t - c.d.wt0, 0)} s, o preço de WINV26 foi de ${fpr(w, c.d.w0)} para ${LB(fpr(w, w.refT()))}. O centro do túnel ${c1 === c.d.wc0 ? 'continuou em ' + LB(fp(w, c1)) : 'foi de ' + fp(w, c.d.wc0) + ' para ' + LB(fp(w, c1))} e só se atualiza quando o prazo vence ou o preço percorre metade da meia-largura. No gráfico, a linha dourada de um futuro tem degraus; a de uma ação acompanha cada negócio.`; },
+        x: c => { const w = c.E.by.WINV26, c1 = w.tun.ult.c; return `Em ${fnum(c.E.t - c.d.wt0, 0)} s, o preço de WINV26 foi de ${fpr(w, c.d.w0)} para ${LB(fpr(w, w.refT()))}. O centro do túnel ${c1 === c.d.wc0 ? 'continuou em ' + LB(fp(w, c1)) : 'foi de ' + fp(w, c.d.wc0) + ' para ' + LB(fp(w, c1))} e só se atualiza quando o prazo vence ou o preço percorre metade da meia-largura. No gráfico, a linha laranja de um futuro tem degraus; a de uma ação acompanha cada negócio.`; },
         btn: 'Ver o C-LAST' },
       { t: 'C-LAST: o melhor entre o último e o livro', hl: ['chartWrap'],
         x: c => { const i = c.i, L = i.refT(), cl = clastOf(i); return `O ${LB('C-LAST')} funciona assim: vale o último preço se ele estiver entre a melhor compra e a melhor venda; se a melhor compra estiver acima dele, vale a melhor compra; se a melhor venda estiver abaixo, vale a melhor venda. A B3 usa o C-LAST em contratos futuros de vencimentos mais longos, onde quase não há negócio.<br>Em PETR4 agora: último ${LB(fpr(i, L))}, melhor compra ${fp(i, i.bb())}, melhor venda ${fp(i, i.ba())}. O C-LAST seria ${LB(fpr(i, cl.v))}: ${cl.why}. Vamos simular um momento em que os melhores vendedores recuam e chega uma compra um tick acima do último negócio.`; },
@@ -225,22 +225,22 @@ const LESSONS = [
       opts: ['Cada negócio, como nas ações', 'O prazo de atualização ou o preço andar metade da meia-largura', 'Só o call de abertura'], ok: 1,
       why: `Nos futuros o centro anda em degraus: a cada ${CONFIG.futuresCenter.everySec} s ou quando o preço percorre metade da meia-largura do túnel.` }) },
 
-  { id: 'ult', grp: 'tuneis', title: 'Leilão por último preço', sub: 'Uma compra grande passa do tubo dourado',
+  { id: 'ult', grp: 'tuneis', title: 'Leilão por último preço', sub: 'Uma compra grande passa do tubo laranja',
     level: 'Básico', mins: 4,
     b3: () => `Túnel de leilão por último preço na tabela de ações da B3: <b>±${pctTxt(CG().IBOV.ult.pct)}%</b> no Ibovespa/IBrX, ±${pctTxt(CG().OUTROS.ult.pct)}% nos demais índices, ±${pctTxt(CG().ETF.ult.pct)}% nos ETF e ±${pctTxt(CG().SMALL.ult.pct)}% nos demais papéis. Nos futuros mais líquidos: ±${pctTxt(CG().WIN.ult.pct)}% no mini índice e ±${pctTxt(CG().WDO.ult.pct)}% no mini dólar. O DI não tem esse túnel.`,
     quiz2: () => ({
-      q: 'O negócio que sairia fora do tubo dourado não acontece. E o que sobrou da ordem?',
+      q: 'O negócio que sairia fora do tubo laranja não acontece. E o que sobrou da ordem?',
       opts: ['É cancelada', 'Negocia ao preço do limite do tubo', 'Vai para o livro do leilão e espera o preço teórico'], ok: 2,
       why: 'O negócio fora do túnel não sai, mas a ordem não desaparece: o que sobrou entra no livro do leilão e participa do preço único.' }),
     goal: 'o que acontece quando um negócio sairia fora do túnel de leilão, e como o leilão forma um preço único.',
     seed: 101, start: '10:16:00', focus: 'PETR4', quiet: ['PETR4'], gap: { tk: 'B3SA3', pct: 0.012 },
     steps: [
-      { t: 'O tubo dourado', hl: ['chartWrap', 'reguaWrap'],
-        x: c => { const u = c.i.tun.ult, i = c.i; return `O tubo dourado é o ${LB('túnel de leilão por último preço')} de PETR4: ${pctSpec(i.g.ult)} em torno do preço-base (${i.g.priceBase === 'LTP' ? 'LTP, o último preço negociado' : baseMethodName(i)}), agora ${LB(fpr(i, u.c))}. Os limites, ${LB(fp(i, u.lo))} e ${LB(fp(i, u.hi))}, aparecem escritos na ponta do tubo.<br>Ele age no ${LB('momento do negócio')}: se o próximo negócio sairia fora do tubo, ele não acontece e o ativo entra em leilão. Na régua à direita, o tubo é o portão dourado.`; },
+      { t: 'O tubo laranja', hl: ['chartWrap', 'reguaWrap'],
+        x: c => { const u = c.i.tun.ult, i = c.i; return `O tubo laranja é o ${LB('túnel de leilão por último preço')} de PETR4: ${pctSpec(i.g.ult)} em torno do preço-base (${i.g.priceBase === 'LTP' ? 'LTP, o último preço negociado' : baseMethodName(i)}), agora ${LB(fpr(i, u.c))}. Os limites, ${LB(fp(i, u.lo))} e ${LB(fp(i, u.hi))}, aparecem escritos na ponta do tubo.<br>Ele age no ${LB('momento do negócio')}: se o próximo negócio sairia fora do tubo, ele não acontece e o ativo entra em leilão. Na régua à direita, o tubo é o portão laranja.`; },
         btn: 'Mandar uma compra grande', go: c => { markTrades(c); c.E.doWhale(c.i, 1); }, run: RUN_AUC },
       { t: 'Por que entrou em leilão', hl: ['chartWrap', 'reguaWrap'],
         x: c => { const i = c.i, f = newTrades(c), q = f.reduce((s, x) => s + x.q, 0);
-          return (f.length ? `Primeiro, a ordem comprou ${LB(fq(q) + ' ações')} ${tradeRange(i, f)}: tudo o que estava à venda dentro do tubo. ` : '') + whyIn(i, lesAuc(c)) + '<br>No gráfico, o bloco dourado marca o leilão; na régua, o portão fechou.'; } },
+          return (f.length ? `Primeiro, a ordem comprou ${LB(fq(q) + ' ações')} ${tradeRange(i, f)}: tudo o que estava à venda dentro do tubo. ` : '') + whyIn(i, lesAuc(c)) + '<br>No gráfico, o bloco laranja marca o leilão; na régua, o portão fechou.'; } },
       { t: 'O que acontece no leilão', hl: ['panelBox'], x: aucText, btn: 'Ver até o fim', run: RUN_END },
       { t: 'Fim do leilão', hl: ['chartWrap', 'reguaWrap'], x: c => endText(c.i, lesAuc(c)) + recenterText(c.i) }
     ],
@@ -250,30 +250,30 @@ const LESSONS = [
       'O leilão fecha tudo a um preço único, o teórico, e os túneis se recentralizam em volta dele.'
     ],
     quiz: c => { const i = c.i, u = i.tun.ult, p = u.lo - 1; return {
-      q: `Depois do leilão, o tubo dourado vai de ${fp(i, u.lo)} a ${fp(i, u.hi)}. Uma venda grande faria o próximo negócio sair a ${fpr(i, p)}. O que acontece?`,
+      q: `Depois do leilão, o tubo laranja vai de ${fp(i, u.lo)} a ${fp(i, u.hi)}. Uma venda grande faria o próximo negócio sair a ${fpr(i, p)}. O que acontece?`,
       opts: ['O negócio sai normalmente', 'PETR4 entra em leilão de novo', 'A venda é recusada'], ok: 1,
-      why: `${fp(i, p)} fica ${tickWords(i, 1)} abaixo do limite inferior do tubo: o negócio não sai e PETR4 volta a leilão. A recusa só acontece além da linha vinho, em ${fp(i, i.tun.rej.lo)}.` }; } },
+      why: `${fp(i, p)} fica ${tickWords(i, 1)} abaixo do limite inferior do tubo: o negócio não sai e PETR4 volta a leilão. A recusa só acontece além da linha cinza, em ${fp(i, i.tun.rej.lo)}.` }; } },
 
   { id: 'med', grp: 'tuneis', title: 'Leilão por preço médio', sub: 'A escada: passos pequenos, soma grande',
     level: 'Intermediário', mins: 4,
     b3: () => `Túnel de preço médio na tabela de ações da B3: <b>±${pctTxt(CG().IBOV.med.pct)}%</b> no Ibovespa/IBrX, ±${pctTxt(CG().OUTROS.med.pct)}% nos demais índices e ±${pctTxt(CG().SMALL.med.pct)}% nos demais papéis. O tempo de recálculo da média está num comunicado externo (aqui, ${CONFIG.vwapWindowSec} s). Nos futuros mais líquidos a janela é de <b>${CG().WIN.vwSec} s</b> (nos outros vencimentos, 5 min): mini índice ±${pctTxt(CG().WIN.med.pct)}%, mini dólar ±${pctTxt(CG().WDO.med.pct)}% e DI ±${bps(CG().DI1.med)} pontos-base.`,
     quiz2: () => ({
-      q: 'Por que cada degrau da escada passa pelo tubo dourado?',
-      opts: ['Porque o tubo dourado fica fixo no dia', 'Porque o centro do tubo acompanha o último preço, degrau a degrau', 'Porque a média ignora negócios pequenos'], ok: 1,
-      why: 'O tubo dourado se recentra no último negócio (LTP), então cada passo pequeno cabe nele. A média guarda o passado e é a única que percebe a soma.' }),
-    goal: 'como o túnel de preço médio pega uma sequência de negócios que, um a um, passaria no tubo dourado.',
+      q: 'Por que cada degrau da escada passa pelo tubo laranja?',
+      opts: ['Porque o tubo laranja fica fixo no dia', 'Porque o centro do tubo acompanha o último preço, degrau a degrau', 'Porque a média ignora negócios pequenos'], ok: 1,
+      why: 'O tubo laranja se recentra no último negócio (LTP), então cada passo pequeno cabe nele. A média guarda o passado e é a única que percebe a soma.' }),
+    goal: 'como o túnel de preço médio pega uma sequência de negócios que, um a um, passaria no tubo laranja.',
     seed: 102, start: '10:16:00', focus: 'PETR4', quiet: ['PETR4'], gap: { tk: 'B3SA3', pct: 0.012 },
     steps: [
       { t: 'A linha índigo', hl: ['chartWrap'],
-        x: c => { const m = c.i.tun.med, i = c.i; return `As linhas índigo tracejadas são o ${LB('túnel de preço médio')}: ${pctSpec(i.g.med)} sobre a média ponderada dos negócios dos últimos ${CONFIG.vwapWindowSec} s (agora ${fpr(i, m.c)}), de ${LB(fp(i, m.lo))} a ${LB(fp(i, m.hi))}.<br>Ele existe para pegar movimentos em que cada passo é pequeno, mas a soma é grande: a ${LB('escada')}. O tubo dourado anda junto com cada degrau; a média, não.`; },
+        x: c => { const m = c.i.tun.med, i = c.i; return `As linhas índigo tracejadas são o ${LB('túnel de preço médio')}: ${pctSpec(i.g.med)} sobre a média ponderada dos negócios dos últimos ${CONFIG.vwapWindowSec} s (agora ${fpr(i, m.c)}), de ${LB(fp(i, m.lo))} a ${LB(fp(i, m.hi))}.<br>Ele existe para pegar movimentos em que cada passo é pequeno, mas a soma é grande: a ${LB('escada')}. O tubo laranja anda junto com cada degrau; a média, não.`; },
         btn: 'Começar uma escada de vendas', go: c => c.E.doEscada(c.i, -1),
-        run: { until: lesStarted, max: 150, watch: 'Degraus de venda a cada 7 a 12 s. Cada um passa no tubo dourado, porque a base desce junto; a média de 60 s fica para trás. Observe o preço chegar à linha índigo de baixo.' } },
+        run: { until: lesStarted, max: 150, watch: 'Degraus de venda a cada 7 a 12 s. Cada um passa no tubo laranja, porque a base desce junto; a média de 60 s fica para trás. Observe o preço chegar à linha índigo de baixo.' } },
       { t: 'Por que entrou em leilão', hl: ['chartWrap'],
         x: c => {
           const a = lesAuc(c), i = c.i; let s = whyIn(i, a);
           if (a && a.trig.kind === 'med') {
             const k = i.hist.ult.idx(a.t0 - 0.01), lo = k >= 0 ? i.hist.ult.v[0][k] : NaN;
-            if (lo === lo) s += `<br>Pelo tubo dourado, esse negócio ${a.trig.p >= lo ? 'passaria' : 'também não passaria'}: o limite inferior dele estava em ${fpr(i, lo)}. Foi a média que percebeu que a queda, somada, já passava de ${fnum(i.g.med.pct * 100, 0)}%.`;
+            if (lo === lo) s += `<br>Pelo tubo laranja, esse negócio ${a.trig.p >= lo ? 'passaria' : 'também não passaria'}: o limite inferior dele estava em ${fpr(i, lo)}. Foi a média que percebeu que a queda, somada, já passava de ${fnum(i.g.med.pct * 100, 0)}%.`;
           }
           return s;
         } },
@@ -282,13 +282,13 @@ const LESSONS = [
     ],
     recap: () => [
       `O túnel de preço médio compara o negócio com a média ponderada dos últimos ${CONFIG.vwapWindowSec} s, não com o último preço.`,
-      'Numa escada, cada degrau passa no tubo dourado, porque a base anda junto. A média fica para trás e percebe a soma.',
+      'Numa escada, cada degrau passa no tubo laranja, porque a base anda junto. A média fica para trás e percebe a soma.',
       'Quando o negócio sairia fora da faixa índigo, o ativo vai a leilão, como no túnel do último preço.'
     ],
     quiz: () => ({
-      q: 'Em 30 segundos, uma ação cai três vezes, cerca de 1% por vez, e cada queda cabe no tubo dourado. Qual túnel percebe o movimento?',
+      q: 'Em 30 segundos, uma ação cai três vezes, cerca de 1% por vez, e cada queda cabe no tubo laranja. Qual túnel percebe o movimento?',
       opts: ['O de rejeição', 'O de preço médio', 'Nenhum: cada passo é pequeno'], ok: 1,
-      why: `O tubo dourado anda junto com o preço, então cada degrau passa. A média dos últimos ${CONFIG.vwapWindowSec} s ainda carrega os preços de antes da queda: quando o negócio se afasta ${fnum(CONFIG.groups.IBOV.med.pct * 100, 0)}% dela, o ativo vai a leilão.` }) },
+      why: `O tubo laranja anda junto com o preço, então cada degrau passa. A média dos últimos ${CONFIG.vwapWindowSec} s ainda carrega os preços de antes da queda: quando o negócio se afasta ${fnum(CONFIG.groups.IBOV.med.pct * 100, 0)}% dela, o ativo vai a leilão.` }) },
 
   { id: 'est', grp: 'tuneis', title: 'Leilão pelo túnel estático', sub: 'VALE3 passa de +10% sobre o fechamento',
     level: 'Intermediário', mins: 4,
@@ -379,7 +379,7 @@ const LESSONS = [
         x: c => { const a = lesAuc(c), i = c.i, fv = Math.round(i.fv / i.tick); return `A proteção vale ${pctSpec(a.protSpec)} sobre ${LB(fpr(i, a.prot.c))}, o último negócio antes do leilão: de ${LB(fp(i, a.prot.lo))} a ${LB(fp(i, a.prot.hi))}.<br>Só que, depois da notícia, o valor justo está perto de ${LB(fpr(i, fv))}, ${fv >= a.prot.hi ? 'acima da faixa' : 'perto da borda'}. As ofertas do leilão chegam perto dele, e o teórico caminha junto: agora ${fpr(i, a.theo)}, ${bandPos(a)}. O painel mostra essa posição ao vivo.`; },
         btn: 'Ver o fim previsto', run: RUN_PRORR1 },
       { t: 'Por que foi prorrogado', hl: ['chartWrap', 'panelBox'], skip: c => !lesNProrr(c),
-        x: c => { const a = lesAuc(c); return whyProrr(c.i, a, a.prorr[0]) + '<br>Cada prorrogação estica o bloco dourado para a direita, com o motivo escrito. No novo fim previsto, o sistema confere tudo de novo.'; },
+        x: c => { const a = lesAuc(c); return whyProrr(c.i, a, a.prorr[0]) + '<br>Cada prorrogação estica o bloco laranja para a direita, com o motivo escrito. No novo fim previsto, o sistema confere tudo de novo.'; },
         btn: 'Ver até o fim', run: RUN_END },
       { t: 'Fim do leilão', hl: ['chartWrap'], x: c => endText(c.i, lesAuc(c)) + recenterText(c.i) }
     ],
@@ -544,11 +544,11 @@ const LESSONS = [
 
   { id: 'di', grp: 'fut', title: 'DI: sem túnel de último preço', sub: 'Só o preço médio e a rejeição, em pontos-base',
     level: 'Avançado', mins: 4,
-    goal: 'por que o DI de um dia não tem o tubo dourado, e como o leilão nasce do túnel de preço médio.',
+    goal: 'por que o DI de um dia não tem o tubo laranja, e como o leilão nasce do túnel de preço médio.',
     seed: 123, start: '10:16:00', focus: 'DI1F27', quiet: ['DI1F27'], gap: { tk: 'B3SA3', pct: 0.012 },
     b3: () => { const d = CG().DI1; return `Planilha de futuros de taxa de juros em reais da B3 (14/09/2026), grupo D1 do DI de um dia: rejeição <b>±${bps(d.rej)} pontos-base</b>, <b>sem túnel de leilão por último preço</b>, preço médio ±${bps(d.med)} pontos-base com janela de ${d.vwSec} s, proteção do leilão ±${bps(d.protAuction)} pontos-base e proteção por quantidade de ${fq(d.qtyProt)} contratos no primeiro vencimento (30.000 nos demais). Leilão de 1 min, com fase crítica de 15 s e duas extensões de 30 s.`; },
     steps: [
-      { t: 'Sem tubo dourado', hl: ['chartWrap', 'panelBox'],
+      { t: 'Sem tubo laranja', hl: ['chartWrap', 'panelBox'],
         x: c => { const i = c.i, r = i.tun.rej, m = i.tun.med; return `O DI1 negocia ${LB('taxa')} (% ao ano), e os túneis dele são medidos em ${LB('pontos-base')}: 100 pontos-base são 1 ponto percentual. Na planilha da B3, o DI de um dia não tem túnel de leilão por último preço. Sobram a ${LB('rejeição')} (±${bps(i.g.rej)} pontos-base, de ${fp(i, r.lo)} a ${fp(i, r.hi)}) e o ${LB('preço médio')} (±${bps(i.g.med)} pontos-base sobre a média de ${vwSecOf(i)} s, de ${fp(i, m.lo)} a ${fp(i, m.hi)}).<br>Vamos soltar uma notícia de juros.`; },
         btn: 'Soltar a notícia', go: c => { c.E.doNews(c.i, 1, 0.15); c.E.updateFV(0); }, run: { until: lesStarted, max: 300 } },
       { t: 'Por que entrou em leilão', hl: ['chartWrap'],
@@ -584,7 +584,7 @@ const LESSONS = [
     seed: 201, start: '10:16:00', focus: 'PETRJ400', quiet: ['PETRJ400', 'PETR4'], gap: { tk: 'B3SA3', pct: 0.012 },
     steps: [
       { t: 'Um túnel que vem de fora', hl: ['chartWrap'],
-        x: c => { const i = c.i, u = i.tun.ult, P = c.E.by.PETR4; return `PETRJ400 é uma ${LB('opção de compra')} de PETR4 com strike ${LB('R$ 40,00')}. O centro do tubo dourado não é o último negócio da opção: é o ${LB('preço de referência')}: a média entre os limites do leilão, calculados com Black-Scholes e PETR4 a ${fpr(P, P.baseT)}. Agora ele vale ${LB(fpr(i, u.c))}.<br>Os limites (${LB(fp(i, u.lo))} e ${LB(fp(i, u.hi))}) usam a mínima e a máxima de PETR4 nos últimos ${CONFIG.option.windowSec} s, com um choque de ${LB(pctTxt(i.g.ult.volShock) + '%')} na volatilidade e de ${pctTxt(i.g.ult.spotShock)}% no preço de PETR4. O mini-gráfico embaixo mostra PETR4.`; },
+        x: c => { const i = c.i, u = i.tun.ult, P = c.E.by.PETR4; return `PETRJ400 é uma ${LB('opção de compra')} de PETR4 com strike ${LB('R$ 40,00')}. O centro do tubo laranja não é o último negócio da opção: é o ${LB('preço de referência')}: a média entre os limites do leilão, calculados com Black-Scholes e PETR4 a ${fpr(P, P.baseT)}. Agora ele vale ${LB(fpr(i, u.c))}.<br>Os limites (${LB(fp(i, u.lo))} e ${LB(fp(i, u.hi))}) usam a mínima e a máxima de PETR4 nos últimos ${CONFIG.option.windowSec} s, com um choque de ${LB(pctTxt(i.g.ult.volShock) + '%')} na volatilidade e de ${pctTxt(i.g.ult.spotShock)}% no preço de PETR4. O mini-gráfico embaixo mostra PETR4.`; },
         btn: 'Fazer PETR4 subir',
         go: c => {
           const E = c.E, P = E.by.PETR4, i = c.i, pv = E.by.PETRV370;
@@ -605,7 +605,7 @@ const LESSONS = [
             (nt ? `Nesse meio-tempo, PETRJ400 teve ${nt} negócio${nt > 1 ? 's' : ''}: compradores foram atrás das ofertas de venda que ficaram baratas de repente.<br>` : '') +
             `O limite inferior ${u1.lo === u0.lo ? 'não mudou' : `quase não mudou (${fp(i, u0.lo)} → ${fp(i, u1.lo)})`}: ele usa a ${LB('mínima de PETR4 nos últimos ' + CONFIG.option.windowSec + ' s')}, que ainda é o preço de antes da alta. Durante um salto, o túnel da opção ${LB('alarga')}.`;
         },
-        btn: `Esperar a janela de ${CONFIG.option.windowSec} s`, run: { until: c => c.E.t >= c.d.tJump + CONFIG.option.windowSec + 2, max: 90, watch: `A janela de ${CONFIG.option.windowSec} s está passando: observe o limite inferior do tubo dourado subir quando o preço antigo de PETR4 sair dela.` } },
+        btn: `Esperar a janela de ${CONFIG.option.windowSec} s`, run: { until: c => c.E.t >= c.d.tJump + CONFIG.option.windowSec + 2, max: 90, watch: `A janela de ${CONFIG.option.windowSec} s está passando: observe o limite inferior do tubo laranja subir quando o preço antigo de PETR4 sair dela.` } },
       { t: 'A janela passou', hl: ['chartWrap'],
         x: c => {
           const E = c.E, i = c.i, u1 = c.d.u1, u2 = i.tun.ult, pv = E.by.PETRV370, n = outCount(i);
@@ -636,7 +636,7 @@ const LESSONS = [
     seed: 206, start: '10:16:00', focus: 'PETRJ400', quiet: ['PETRJ400', 'PETR4'], gap: { tk: 'B3SA3', pct: 0.012 },
     steps: [
       { t: 'O tubo da opção', hl: ['chartWrap'],
-        x: c => { const i = c.i, u = i.tun.ult, P = c.E.by.PETR4; return `O tubo dourado de PETRJ400 vai de ${LB(fp(i, u.lo))} a ${LB(fp(i, u.hi))}, em torno da referência ${fpr(i, u.c)}, calculada com PETR4 a ${fpr(P, P.baseT)}.<br>Um comprador vai varrer o livro da opção até passar do limite superior.`; },
+        x: c => { const i = c.i, u = i.tun.ult, P = c.E.by.PETR4; return `O tubo laranja de PETRJ400 vai de ${LB(fp(i, u.lo))} a ${LB(fp(i, u.hi))}, em torno da referência ${fpr(i, u.c)}, calculada com PETR4 a ${fpr(P, P.baseT)}.<br>Um comprador vai varrer o livro da opção até passar do limite superior.`; },
         btn: 'Mandar a compra',
         go: c => { const i = c.i, u = i.tun.ult; c.d.pre = Object.assign({}, u); c.E.doPush(i, 1, u.hi, u.hi + 3, 'compra agressiva', q => `Compra agressiva simulada em PETRJ400: ${fq(q)} opções com limite ${fpr(i, u.hi + 3)}.`, null, 5 * i.lot); },
         run: RUN_AUC },
