@@ -4,7 +4,7 @@
    do roteiro. O motor chama LS via E.hook a cada passo de simulação, então a
    aula pausa exatamente no instante em que a condição do roteiro se cumpre.
    ============================================================================ */
-const LS = { les: null, k: -1, ctx: null, running: false, runT0: 0, runMax: 900, next: null, fail: false, saved: null, hl: null, min: false, prep: false };
+const LS = { les: null, k: -1, ctx: null, running: false, runT0: 0, runMax: 900, next: null, fail: false, saved: null, hl: null, min: false, prep: false, qs: null, qa: [], quiz: null };
 const LESSON_SCROLL = { chartWrap: 'colCenter', reguaWrap: 'colCenter', apLights: 'panelBox' }; // para onde rolar em cada destaque
 
 /* aulas concluídas: ficam marcadas neste navegador (sem armazenamento, só nesta visita) */
@@ -23,11 +23,14 @@ function buildLesMenu() {
     Object.keys(LES_GRP).map((g, k) => (k ? '<hr>' : '') + `<div class="mh">${LES_GRP[g].t}</div>` + LESSONS.filter(l => l.grp === g).map(item).join('')).join('');
 }
 function quizHTML() {
-  const Q = LS.quiz; if (!Q) return '';
-  const a = LS.qa;
-  return `<div class="lq"><p class="lq-k">Teste rápido</p><p class="lq-q">${Q.q}</p><div class="lq-opts">` +
-    Q.opts.map((o, j) => `<button class="lq-o${a == null ? '' : (j === Q.ok ? ' ok' : (j === a ? ' no' : ''))}" data-ls="quiz" data-o="${j}"${a != null ? ' disabled' : ''}>${o}</button>`).join('') + '</div>' +
-    (a != null ? `<p class="lq-fb ${a === Q.ok ? 'ok' : 'no'}"><b>${a === Q.ok ? 'Isso.' : 'Não é essa.'}</b> ${Q.why}</p>` : '') + '</div>';
+  const Q = LS.qs; if (!Q || !Q.length) return '';
+  const A = LS.qa || [], done = A.filter(x => x != null).length, right = Q.filter((q, k) => A[k] === q.ok).length;
+  return Q.map((q, k) => {
+    const a = A[k];
+    return `<div class="lq"><p class="lq-k">Teste rápido${Q.length > 1 ? ` · pergunta ${k + 1} de ${Q.length}` : ''}</p><p class="lq-q">${q.q}</p><div class="lq-opts">` +
+      q.opts.map((o, j) => `<button class="lq-o${a == null ? '' : (j === q.ok ? ' ok' : (j === a ? ' no' : ''))}" data-ls="quiz" data-k="${k}" data-o="${j}"${a != null ? ' disabled' : ''}>${o}</button>`).join('') + '</div>' +
+      (a != null ? `<p class="lq-fb ${a === q.ok ? 'ok' : 'no'}"><b>${a === q.ok ? 'Isso.' : 'Não é essa.'}</b> ${q.why}</p>` : '') + '</div>';
+  }).join('') + (Q.length > 1 && done === Q.length ? `<p class="lq-score ${right === Q.length ? 'ok' : 'no'}"><b>Você acertou ${right} de ${Q.length}.</b> ${right === Q.length ? 'Pode seguir para a próxima aula.' : 'Vale repetir a aula para fixar o que errou.'}</p>` : '');
 }
 function closeMenus() {
   for (const [m, b] of [['mScen', 'bScen'], ['mLes', 'bLes']]) { $(m).hidden = true; $(b).setAttribute('aria-expanded', 'false'); }
@@ -45,7 +48,7 @@ function startLesson(id) {
   if (UI.E) { UI.E.hook = null; }
   LS.les = les; LS.ctx = null; LS.k = -1; LS.running = false; LS.next = null; LS.fail = false; LS.prep = true; LS.min = false; LS.hl = null;
   newSession(les.seed, { gapTicker: les.gap.tk, gapPct: les.gap.pct, focus: les.focus, intensity: 'normal' });
-  const E = UI.E; E.script = []; for (const tk of les.quiet) E.quiet.add(tk);
+  const E = UI.E; E.script = []; E.noQty = !les.qty; for (const tk of les.quiet) E.quiet.add(tk);
   LS.ctx = { E, les, i: E.by[les.focus], d: {} };
   UI.slowmo = false; $('cSlow').checked = false; setSpeed('normal');
   lesRender();
@@ -55,10 +58,11 @@ function lesShow(k) {
   const les = LS.les, c = LS.ctx; if (!les) return;
   while (k < les.steps.length - 1 && les.steps[k].skip && les.steps[k].skip(c)) k++;
   LS.k = k; LS.running = false; LS.fail = false; UI.E.hook = null; UI.paused = true;
-  const st = les.steps[k]; LS.qa = null; LS.quiz = st.summary && les.quiz ? les.quiz(c) : null; // o teste é montado uma vez, com os números do fim da aula
+  const st = les.steps[k]; LS.qa = []; // o teste é montado uma vez, com os números do fim da aula (uma ou duas perguntas)
+  LS.qs = st.summary ? [les.quiz, les.quiz2].filter(Boolean).map(q => q(c)) : null; LS.quiz = LS.qs && LS.qs[0] || null;
   if (st.enter) st.enter(c);
   if (st.summary) lesMarkDone(les.id);
-  if (UI.focus !== c.i) setFocus(les.focus);
+  const fk = st.focus || les.focus; if (UI.focus.ticker !== fk) setFocus(fk);
   setSpeed('normal');
   lesRender(); refreshDOM(true); lesHighlight(les.steps[k].hl);
   const b = $('lsFoot').querySelector('.primary'); if (b && !UI.mobile) b.focus({ preventScroll: true });
@@ -87,7 +91,7 @@ function lesAfterFrame() {
 }
 function exitLesson() {
   if (!LS.les) return;
-  const E = UI.E; if (E) { E.hook = null; E.quiet.clear(); E.setIntensity(UI.intensity); }
+  const E = UI.E; if (E) { E.hook = null; E.noQty = false; E.quiet.clear(); E.setIntensity(UI.intensity); }
   LS.les = null; LS.ctx = null; LS.running = false; LS.next = null; LS.fail = false; LS.prep = false; LS.hl = null;
   if (LS.saved) { UI.slowmo = LS.saved.slowmo; $('cSlow').checked = UI.slowmo; setSpeed(LS.saved.speed); lesSetFull(LS.saved.full); LS.saved = null; }
   UI.paused = false;
@@ -111,7 +115,8 @@ function lesRender(keepScroll) {
     foot = '<button class="btn primary" data-ls="repeat">Repetir a aula</button><button class="btn" data-ls="exit">Sair</button>';
   } else if (s.summary) {
     const rc = les.recap ? les.recap(LS.ctx) : [];
-    body = `<h4>Resumo da aula</h4><ul class="ls-recap">${rc.map(x => `<li>${x}</li>`).join('')}</ul>${quizHTML()}`;
+    const b3 = les.b3 ? `<div class="ls-b3"><b>Na B3 de verdade</b>${les.b3(LS.ctx)}</div>` : '';
+    body = `<h4>Resumo da aula</h4><ul class="ls-recap">${rc.map(x => `<li>${x}</li>`).join('')}</ul>${b3}${quizHTML()}`;
     const nx = LESSONS[idx + 1]; foot = '<button class="btn" data-ls="repeat">Repetir</button>' + (nx ? `<button class="btn primary" data-ls="next">Próxima: ${nx.title}</button>` : '') + '<button class="btn" data-ls="exit">Sair da aula</button>';
   } else {
     body = (LS.k === 0 ? `<p class="ls-goal"><b>Nesta aula, você vai ver</b> ${les.goal}</p>` : '') + `<h4>${lesVal(s.t)}</h4><div class="ls-text">${s.x(LS.ctx)}</div>`;
@@ -181,7 +186,7 @@ function wireLessons() {
     else if (a === 'next') { const nx = LESSONS[LESSONS.indexOf(LS.les) + 1]; if (nx) startLesson(nx.id); }
     else if (a === 'exit') exitLesson();
     else if (a === 'min') { LS.min = !LS.min; lesRender(); }
-    else if (a === 'quiz') { if (LS.qa == null && LS.quiz) { LS.qa = +b.dataset.o; lesRender(true); } }
+    else if (a === 'quiz') { const k = +b.dataset.k; if (LS.qs && LS.qs[k] && LS.qa[k] == null) { LS.qa[k] = +b.dataset.o; lesRender(true); } }
   });
   window.addEventListener('resize', lesPlace);
 }

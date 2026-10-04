@@ -1,11 +1,13 @@
 'use strict';
 /* ============================================================================
-   CONFIG — todos os números abaixo são PADRÕES DIDÁTICOS, inspirados na tabela
-   pública de túneis de negociação da B3 (PUMA Trading System).
+   CONFIG — os percentuais dos túneis (grupos, mais abaixo) seguem os documentos
+   publicados pela B3 em "Parâmetros dos túneis de negociação": tabela de ações de
+   18/03/2026, planilhas de futuros de 2026 e tabela de opções de 02/10/2023. O
+   restante (fluxo de ordens, escada de prorrogação das ações, durações dos leilões
+   de ações, quantidades) é DIDÁTICO.
 
-   ⚠ Antes de usar em aula, confira a versão oficial vigente dos túneis, das
-   durações de leilão e da grade horária no site da B3. Os valores daqui são
-   aproximações educativas e podem estar simplificados ou desatualizados.
+   ⚠ A B3 atualiza esses documentos com frequência. Antes de usar em aula,
+   confira a versão vigente em b3.com.br.
 
    Convenções de limites (valem para todo o código):
    - Rejeição e leilão: limites arredondados ao tick PARA DENTRO (inferior com
@@ -45,40 +47,54 @@ const CONFIG = {
   futuresCenter: { everySec: 30, moveFrac: 0.5 }, // futuros: centro atualizado em degraus
                                     // (a cada X s ou quando o preço anda moveFrac da meia-largura)
   refPriceEverySec: 15,             // "Most recent": preço de referência recalculado a cada X s
-  option: { windowSec: 45, r: 0.1425, daysToExpiry: 15, minHalfTicks: 2, rejMinHalfTicks: 5 },
+  option: { windowSec: 45, r: 0.1425, daysToExpiry: 15 },   // janela de máxima e mínima do ativo-objeto; juros; prazo
 
-  // ---------------- grupos de túneis (tabela 2.8) ----------------
-  // pct = multiplicativo; abs = aditivo (R$, pontos ou p.p.)
-  // priceBase (centro dos túneis) conferido nos parâmetros publicados pela B3: mercado de ações de 18/03/2026
-  // (LTP para todo o mercado à vista, inclusive ETF) e futuros de 01/10/2026 e 14/09/2026 (Most Recent, também
-  // no túnel de rejeição). Opções: túneis pelo teórico, com choques de volatilidade.
+  // ---------------- grupos de túneis ----------------
+  // Números conferidos nos parâmetros publicados pela B3 (página "Parâmetros dos túneis de negociação"):
+  //   · ações e ETF: tabela "Mercado de Ações" de 18/03/2026. Preço-base LTP em todo o mercado à vista e rejeição
+  //     de ±20% em todas as linhas. A proteção durante o leilão é MAIS LARGA que a dos calls (ex.: Ibovespa/IBrX 5% x 1,5%);
+  //   · futuros: planilhas de índices (01/10/2026), moedas e juros em reais (14/09/2026), sempre o primeiro grupo do
+  //     contrato, que é o vencimento mais líquido (W1, W3 e D1). Centro "Most Recent" nos túneis de rejeição e de leilão;
+  //   · opções sobre ações: tabela de 02/10/2023 e metodologia de 13/11/2025 (choques RELATIVOS na volatilidade e no
+  //     ativo-objeto, mais a amplitude mínima de banda, AMB).
+  // pct = multiplicativo; abs = aditivo (R$, pontos ou p.p.); min = piso absoluto da faixa de proteção.
+  // vwSec: janela do preço médio. Futuros mais líquidos: 15 s (planilhas); ações: CONFIG.vwapWindowSec.
+  // rule / callRule: prorrogação por alteração no leilão e no call ("Fase Crítica", "Extensões" e "Duração de cada
+  //   Extensão" das planilhas de futuros). Ações e opções usam CONFIG.prorrogation.
+  // qtyProt: proteção por quantidade, em lotes por corretora, quando a B3 publica o valor do grupo.
   groups: {
     IBOV:   { label: 'Ações Ibovespa/IBrX', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.015 }, med: { pct: 0.02 }, est: { pct: 0.10 },
-              protAuction: { pct: 0.015 }, protCall: { pct: 0.05 }, minAmp: true, auctionSec: 180 },
+              protAuction: { pct: 0.05 }, protCall: { pct: 0.015 }, minAmp: true, auctionSec: 180 },
     OUTROS: { label: 'Ações de outros índices', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.03 }, med: { pct: 0.04 }, est: { pct: 0.10 },
-              protAuction: { pct: 0.03 }, protCall: { pct: 0.05 }, minAmp: true, auctionSec: 180 },
+              protAuction: { pct: 0.05 }, protCall: { pct: 0.03 }, minAmp: true, auctionSec: 180 },
     SMALL:  { label: 'Demais ações (small caps)', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.085 }, med: { pct: 0.10 }, est: { pct: 0.10 },
-              protAuction: { pct: 0.03 }, protCall: { pct: 0.15 }, minAmp: true, auctionSec: 180 },
+              protAuction: { pct: 0.15 }, protCall: { pct: 0.03 }, minAmp: true, auctionSec: 180 },
     ETF:    { label: 'ETF', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.04 }, med: { pct: 0.05 }, est: { pct: 0.10 },
-              protAuction: { pct: 0.03 }, protCall: { pct: 0.05 }, minAmp: true, auctionSec: 180 },
-    WIN:    { label: 'Mini Ibovespa', priceBase: 'MOSTRECENT', stepped: true,
-              rej: { pct: 0.05 }, ult: { pct: 0.01 }, med: { pct: 0.01 }, est: null,
-              protAuction: { pct: 0.01 }, protCall: { pct: 0.02 }, auctionSec: 60 },
-    WDO:    { label: 'Mini dólar', priceBase: 'MOSTRECENT', stepped: true,
-              rej: { pct: 0.05 }, ult: { pct: 0.005 }, med: { pct: 0.005 }, est: null,
-              protAuction: { pct: 0.005 }, protCall: { pct: 0.01 }, auctionSec: 60 },
-    DI1:    { label: 'DI de um dia', priceBase: 'MOSTRECENT', stepped: true,
-              rej: { abs: 1.00 }, ult: { abs: 0.10 }, med: { abs: 0.10 }, est: null,
-              protAuction: { abs: 0.10 }, protCall: { abs: 0.20 }, auctionSec: 60 },
+              protAuction: { pct: 0.05 }, protCall: { pct: 0.03 }, minAmp: true, auctionSec: 180 },
+    WIN:    { label: 'Mini Ibovespa', priceBase: 'MOSTRECENT', stepped: true, vwSec: 15,
+              rej: { pct: 0.01 }, ult: { pct: 0.005 }, med: { pct: 0.008 }, est: null,
+              protAuction: { pct: 0.012 }, protCall: { pct: 0.012 }, auctionSec: 60, qtyProt: 66000,
+              rule: { ladder: [15, 15], extendSec: 30 }, callRule: { ladder: [], extendSec: 30 } },
+    WDO:    { label: 'Mini dólar', priceBase: 'MOSTRECENT', stepped: true, vwSec: 15,
+              rej: { pct: 0.014 }, ult: { pct: 0.007 }, med: { pct: 0.013 }, est: null,
+              protAuction: { pct: 0.0175 }, protCall: { pct: 0.0175 }, auctionSec: 60, qtyProt: 4500,
+              rule: { ladder: [15, 15], extendSec: 30 }, callRule: { ladder: [30], extendSec: 30 } },
+    // DI1: a planilha não traz túnel de leilão por último preço ("-"): só o preço médio e a rejeição (em p.p. de taxa)
+    DI1:    { label: 'DI de um dia', priceBase: 'MOSTRECENT', stepped: true, vwSec: 15,
+              rej: { abs: 0.17 }, ult: null, med: { abs: 0.10 }, est: null,
+              protAuction: { abs: 0.09 }, protCall: { abs: 0.09 }, auctionSec: 60, qtyProt: 100000,
+              rule: { ladder: [15, 15], extendSec: 30 }, callRule: { ladder: [30], extendSec: 30 } },
+    // Opções: volShock e spotShock são choques RELATIVOS (45% na volatilidade e 1,5% no ativo-objeto, no leilão;
+    // 80% e 3%, na rejeição). amb = amplitude mínima de banda, em R$ somados e subtraídos do preço de referência.
     OPC:    { label: 'Opções sobre ações', priceBase: 'TEORICO',
-              rej: { volShock: 0.15, spotShock: 0.03 },   // choque de volatilidade alto
-              ult: { volShock: 0.04, spotShock: 0.0 },    // choque de volatilidade moderado
+              rej: { volShock: 0.80, spotShock: 0.03, amb: 0.30 },
+              ult: { volShock: 0.45, spotShock: 0.015, amb: 0.10 },
               med: null, est: null,
-              protAuction: { pct: 0.10 }, protCall: { pct: 0.15 }, auctionSec: 120 }
+              protAuction: { pct: 0.50, min: 0.25 }, protCall: { pct: 0.50, min: 0.25 }, auctionSec: 120 }
   },
 
   // ---------------- leilão ----------------
@@ -94,7 +110,7 @@ const CONFIG = {
     ladder: [60, 30, 15],                 // 1ª, 2ª e 3ª prorrogação por alteração
     maxProtection: 3,                     // após N prorrogações por proteção, a supervisão abre
     maxNoTheo: 2,
-    qtyProtectionLots: 500                // proteção por quantidade: lotes por corretora
+    qtyProtectionLots: 500                // proteção por quantidade: lotes por corretora, compra + venda (a B3 prorroga ao ATINGIR o parâmetro; exemplo da B3: 500)
   },
 
   // ---------------- circuit breaker ----------------
@@ -176,13 +192,13 @@ const CONFIG = {
       qtyAuction: 50000, qtyReject: 500000, activity: 0.7, tradeSize: 300 },
     { ticker: 'WINV26', name: 'Mini Ibovespa out/26', type: 'fut', mapGroup: 'Derivativos', tunnelGroup: 'WIN',
       tick: 5, lot: 1, prevClose: 131850, settle: 131850, vol: 0.20, beta: 1.0, avgVolume: 2e6,
-      qtyAuction: 2000, qtyReject: 10000, activity: 2.0, tradeSize: 6 },
+      qtyAuction: 2000, qtyReject: 25000, activity: 2.0, tradeSize: 6 },   // qtyReject: "quantidade máxima por oferta" (grupo W1)
     { ticker: 'WDOV26', name: 'Mini dólar out/26', type: 'fut', mapGroup: 'Derivativos', tunnelGroup: 'WDO',
       tick: 0.5, lot: 1, prevClose: 5482.0, settle: 5482.0, vol: 0.12, beta: -0.35, avgVolume: 800e3,
-      qtyAuction: 1500, qtyReject: 8000, activity: 1.4, tradeSize: 4 },
+      qtyAuction: 1500, qtyReject: 50000, activity: 1.4, tradeSize: 4 },  // grupo W3
     { ticker: 'DI1F27', name: 'DI1 jan/27 (taxa % a.a.)', type: 'fut', mapGroup: 'Derivativos', tunnelGroup: 'DI1',
       tick: 0.001, lot: 1, prevClose: 14.215, settle: 14.215, volPP: 0.06, beta: -1.2, avgVolume: 400e3,
-      qtyAuction: 5000, qtyReject: 50000, activity: 0.8, tradeSize: 40 },
+      qtyAuction: 5000, qtyReject: 50000, activity: 0.8, tradeSize: 40 },  // grupo D1
     { ticker: 'PETRJ400', name: 'Opção de compra PETR4 out/26, strike 40,00', type: 'opt', mapGroup: 'Derivativos',
       tunnelGroup: 'OPC', underlying: 'PETR4', cp: 'C', strike: 40.00, iv: 0.31,
       tick: 0.01, lot: 100, avgVolume: 8e6, qtyAuction: 200000, qtyReject: 2000000, activity: 0.6,

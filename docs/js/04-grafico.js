@@ -22,7 +22,7 @@ const UI = {
 /* ----------------------------- cores ----------------------------- */
 function readPalette() {
   const cs = getComputedStyle(document.documentElement), P = {};
-  for (const k of ['bg', 'panel', 'panel2', 'line', 'line2', 'text', 'muted', 'faint', 'up', 'down', 'amber', 'amber2', 'violet', 'rasp', 'cyan', 'gray', 'accent', 'onamb', 'onacc'])
+  for (const k of ['bg', 'panel', 'panel2', 'line', 'line2', 'text', 'muted', 'faint', 'up', 'down', 'amber', 'amber2', 'violet', 'rasp', 'cyan', 'gray', 'accent', 'coral', 'onamb', 'onacc'])
     P[k] = cs.getPropertyValue('--' + k).trim() || '#888888';
   UI.pal = P; UI.patterns = {}; UI._rgba = {};
 }
@@ -40,6 +40,49 @@ function hatch(ctx, color, alpha, dpr) {
   const p = ctx.createPattern(c, 'repeat');
   try { p.setTransform(new DOMMatrix().scale(1 / dpr)); } catch (e) { /* navegador antigo: padrão um pouco maior */ }
   UI.patterns[key] = p; return p;
+}
+
+/* ----------------------------- tipos de leilão: nome, cor e ícone -----------------------------
+   Um vocabulário só para o gráfico, o painel, o mapa, a linha do tempo e o guia. Leilões de negócio têm cor
+   própria (dourado, índigo, cinza, laranja); calls ficam em azul, com borda tracejada. Ícones 16×16, só traço. */
+const AUC_KIND = {
+  ult:        { n: 'Último preço', full: 'Leilão por último preço', col: 'amber', call: false,
+                ico: 'M1.5 4h13M1.5 12h13M8 14.5v-9M5 8.5l3-3 3 3', how: 'o negócio sairia fora do tubo dourado' },
+  med:        { n: 'Preço médio', full: 'Leilão por preço médio', col: 'violet', call: false,
+                ico: 'M1.5 4.5h2.5M6.7 4.5h2.6M12 4.5h2.5M1.5 11.5h2.5M6.7 11.5h2.6M12 11.5h2.5M2.5 8.8l3.6-2.4 3 3 4.4-3.4', how: 'o negócio se afastaria da média dos últimos negócios' },
+  est:        { n: 'Estático', full: 'Leilão pelo túnel estático', col: 'gray', call: false,
+                ico: 'M2 4.5h.01M5.4 4.5h.01M8.7 4.5h.01M12 4.5h.01M14 4.5h.01M2 11.5h.01M5.4 11.5h.01M8.7 11.5h.01M12 11.5h.01M14 11.5h.01M8 6.5v3', how: 'o negócio passaria do limite fixo do dia' },
+  qtd:        { n: 'Quantidade', full: 'Leilão por quantidade', col: 'coral', call: false,
+                ico: 'M2 3.5h12M2 8h8.5M2 12.5h5', how: 'a oferta é grande demais, seja qual for o preço' },
+  call_open:  { n: 'Call de abertura', full: 'Call de abertura', col: 'accent', call: true,
+                ico: 'M1.5 12.5h13M4 12.5a4 4 0 0 1 8 0M8 3v2.2M3.2 6.2l1.5 1.5M12.8 6.2l-1.5 1.5', how: 'as ofertas se acumulam antes da abertura' },
+  call_close: { n: 'Call de fechamento', full: 'Call de fechamento', col: 'accent', call: true,
+                ico: 'M4 14V2.5M4 3.5h8l-2 2.6 2 2.6H4', how: 'o preço de fechamento sai deste leilão' },
+  reopen:     { n: 'Reabertura', full: 'Call de reabertura (circuit breaker)', col: 'accent', call: true,
+                ico: 'M13.5 8a5.5 5.5 0 1 1-1.8-4.1M13.5 2.5v3.6h-3.6', how: 'o mercado volta de uma parada geral' }
+};
+const PRORR_KIND = { prot_preco: 'prot', prot_qtd: 'prot', alt60: 'alt', alt30: 'alt', alt15: 'alt', sem_teorico: 'none' };
+const PRORR_STYLE = {
+  prot: { col: 'cyan', n: 'proteção', ico: 'M8 1.5l5.5 2v4.2c0 3.2-2.4 5.6-5.5 6.8-3.1-1.2-5.5-3.6-5.5-6.8V3.5z' },
+  alt:  { col: 'amber', n: 'alteração', ico: 'M9 1.5L3.5 9H8l-1 5.5L12.5 7H8z' },
+  none: { col: 'gray', n: 'sem teórico', ico: 'M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM4 12L12 4' }
+};
+const aucKey = a => a.kind === 'auction' ? a.trig.kind : a.kind;
+const prorrSty = code => PRORR_STYLE[PRORR_KIND[code] || 'none'];
+const icoSVG = (d, cls) => `<svg class="ico${cls ? ' ' + cls : ''}" viewBox="0 0 16 16" aria-hidden="true"><path d="${d}"/></svg>`;
+const _P2D = {};
+function drawIco(ctx, d, cx, cy, s, color, lw) {
+  const q = _P2D[d] || (_P2D[d] = new Path2D(d));
+  ctx.save(); ctx.translate(cx - s / 2, cy - s / 2); ctx.scale(s / 16, s / 16);
+  ctx.strokeStyle = color; ctx.lineWidth = (lw || 1.6) * 16 / s; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]); ctx.stroke(q); ctx.restore();
+}
+/* pílula com ícone (fg: texto, bg: fundo, ic: cor do ícone) */
+function kindPill(ctx, x, y, d, text, fg, bg, ic, align) {
+  ctx.font = '600 11px ' + FONT; const w = ctx.measureText(text).width + 26, h = 17, xa = align === 'right' ? x - w : x;
+  ctx.fillStyle = bg; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(xa, y, w, h, 5); else ctx.rect(xa, y, w, h); ctx.fill();
+  drawIco(ctx, d, xa + 10, y + h / 2, 11, ic, 1.5);
+  ctx.fillStyle = fg; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(text, xa + 18, y + h / 2 + 0.5);
+  return w;
 }
 
 /* ----------------------------- canvas ----------------------------- */
@@ -82,7 +125,7 @@ function stepDec(i, step) { if (i.tick >= 1) return 0; return clamp(Math.ceil(-M
 function inAuctionLike(i) { return (i.state === ST.AUC || i.state === ST.CALL) && i.auction; }
 function dispPriceT(i) { const a = i.auction; return inAuctionLike(i) && a.theo != null ? a.theo : i.refT(); }
 function baseMethodName(i) {
-  if (i.isOpt) return 'teórico (assíncrono)';
+  if (i.isOpt) return 'referência Black-Scholes (assíncrono)';
   const m = { CLAST: 'C-LAST', LTP: 'LTP', MOSTRECENT: 'most recent' }[i.g.priceBase] || i.g.priceBase;
   return i.g.stepped ? m + ', centro em degraus' : m;
 }
@@ -401,21 +444,50 @@ function drawChart() {
   } else hideTip();
 }
 function drawAuctions(ctx, i, t0, t1, X, Y, padT, ph, now, x0, n, xr) {
-  const P = UI.pal, tick = i.tick, sh = UI.chart.show;
+  const P = UI.pal, tick = i.tick, sh = UI.chart.show, dpr = UI.cc.dpr;
   for (const a of i.auctions) {
     const endT = a.ended ? a.t1 : animEnd(a);
     if (endT < t0 || a.t0 > t1) continue;
-    const xa = X(a.t0), xb = Math.max(X(endT), xa + 2), isCall = a.kind !== 'auction';
-    ctx.fillStyle = rgba(P.amber, isCall ? 0.07 : 0.12); ctx.fillRect(xa, padT, xb - xa, ph);
-    ctx.strokeStyle = rgba(P.amber, 0.95); ctx.lineWidth = 1.2;
+    const key = aucKey(a), K = AUC_KIND[key], col = P[K.col], isCall = K.call;
+    const xa = X(a.t0), xb = Math.max(X(endT), xa + 2), xn = X(now);
+    // bloco na cor do tipo; call = hachurado e tracejado
+    ctx.fillStyle = rgba(col, isCall ? 0.05 : 0.10); ctx.fillRect(xa, padT, xb - xa, ph);
+    if (isCall) { ctx.fillStyle = hatch(ctx, col, 0.13, dpr); ctx.fillRect(xa, padT, xb - xa, ph); }
+    // janela de alteração (fase crítica) do fim previsto: uma alteração aqui prorroga
+    if (!a.ended && a.ladder < a.rule.ladder.length) {
+      const w = a.rule.ladder[a.ladder], xw = Math.max(xa, X(endT - w));
+      if (xb - xw > 3) {
+        ctx.fillStyle = hatch(ctx, col, 0.3, dpr); ctx.fillRect(xw, padT + 16, xb - xw, ph - 16);
+        ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+        ctx.beginPath(); ctx.moveTo(Math.round(xw) + 0.5, padT + 16); ctx.lineTo(Math.round(xw) + 0.5, padT + ph); ctx.stroke(); ctx.setLineDash([]);
+        if (xb - xw > 46) { ctx.font = '600 10px ' + FONT; ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText('janela ' + w + ' s', (xw + xb) / 2, padT + ph - 4); }
+      }
+    }
+    // linha do tempo do leilão no topo do bloco: duração prevista na cor do tipo; cada prorrogação na cor da causa
+    const lbl = K.n + (isCall ? '' : ' · ' + fadd(Math.round(a.dur0)));
+    const bar = (xs0, xe, c, ico, text) => {
+      const xs = Math.max(xs0, x0); if (xe <= xs) return;
+      ctx.fillStyle = c; ctx.fillRect(xs, padT, xe - xs, 15); ctx.fillStyle = P.panel; ctx.fillRect(xs0 - 0.5 > x0 ? xs0 - 0.5 : xs, padT, 1, 15);
+      const w = xe - xs; let tx = xs + 4;
+      if (w > 22) { drawIco(ctx, ico, xs + 11, padT + 7.5, 11, P.onamb, 1.5); tx = xs + 20; }
+      ctx.font = '600 10.5px ' + FONT;
+      if (text && w - (tx - xs) > ctx.measureText(text).width + 6) { ctx.fillStyle = P.onamb; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(text, tx, padT + 8); }
+    };
+    bar(xa, X(Math.min(endT, a.t0 + a.dur0)), rgba(col, 0.96), K.ico, lbl);
+    for (const p of a.prorr) { const st = prorrSty(p.code); bar(X(p.prevEnd), X(Math.min(endT, p.newEnd)), rgba(P[st.col], 0.96), st.ico, '+' + fadd(p.add || 60)); }
+    if (!a.ended && xn < xb) { ctx.fillStyle = rgba(P.panel, 0.5); ctx.fillRect(Math.max(xa, xn), padT, xb - Math.max(xa, xn), 15); }
+    // bordas do bloco
+    ctx.strokeStyle = rgba(col, 0.95); ctx.lineWidth = 1.2;
     ctx.setLineDash(isCall ? [4, 3] : []); ctx.beginPath(); ctx.moveTo(Math.round(xa) + 0.5, padT); ctx.lineTo(Math.round(xa) + 0.5, padT + ph); ctx.stroke();
     ctx.setLineDash(a.ended ? (isCall ? [4, 3] : []) : [3, 3]); ctx.beginPath(); ctx.moveTo(Math.round(xb) - 0.5, padT); ctx.lineTo(Math.round(xb) - 0.5, padT + ph); ctx.stroke(); ctx.setLineDash([]);
+    // faixa de proteção
     if (sh.prot) {
       const y1 = Y(a.prot.hi * tick), y2 = Y(a.prot.lo * tick);
       ctx.fillStyle = rgba(P.cyan, isCall ? 0.06 : 0.14); ctx.fillRect(xa, y1, xb - xa, y2 - y1);
       ctx.strokeStyle = rgba(P.cyan, 0.85); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(xa, Math.round(y1) + 0.5); ctx.lineTo(xb, Math.round(y1) + 0.5); ctx.moveTo(xa, Math.round(y2) + 0.5); ctx.lineTo(xb, Math.round(y2) + 0.5); ctx.stroke();
     }
+    // preço teórico
     const tEnd = a.ended ? a.t1 : now;
     if (a.theoS.length) {
       ctx.strokeStyle = P.amber; ctx.lineWidth = 1.6; ctx.setLineDash([2, 3]);
@@ -426,20 +498,23 @@ function drawAuctions(ctx, i, t0, t1, X, Y, padT, ph, now, x0, n, xr) {
       ctx.fillStyle = rgba(P.amber, 0.25); ctx.beginPath(); ctx.arc(x, y, r + 4, 0, 7); ctx.fill();
       ctx.fillStyle = P.amber; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill();
     }
-    const lbl = isCall ? TRIG_LABEL[a.kind] : ({ ult: 'Leilão: último preço', med: 'Leilão: preço médio', est: 'Leilão: estático', qtd: 'Leilão: quantidade' })[a.trig.kind];
-    if (xb - xa > 60) pill(ctx, xa + 3, padT + 3, lbl, P.onamb, rgba(P.amber, 0.94));
+    // prorrogações: linha tracejada e etiqueta na cor da causa
     a.prorr.forEach((p, k) => {
       const x = X(p.prevEnd); if (x < X(t0) - 1 || x > X(t1) + 1) return;
-      ctx.strokeStyle = P.amber; ctx.lineWidth = 1.2; ctx.setLineDash([2, 2]);
-      ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, padT + 22); ctx.lineTo(Math.round(x) + 0.5, padT + ph); ctx.stroke(); ctx.setLineDash([]);
-      pill(ctx, x + 3, padT + 23 + (k % 3) * 20, '+1 min: ' + PRORR_SHORT[p.code], P.amber, rgba(P.panel, 0.92));
+      const st = prorrSty(p.code), c = P[st.col];
+      ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.setLineDash([2, 2]);
+      ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, padT + 15); ctx.lineTo(Math.round(x) + 0.5, padT + ph); ctx.stroke(); ctx.setLineDash([]);
+      const ptx = '+' + fadd(p.add || 60) + ': ' + PRORR_SHORT[p.code]; ctx.font = '600 11px ' + FONT;
+      if (x + 3 + ctx.measureText(ptx).width + 26 > xr) kindPill(ctx, x - 3, padT + 22 + (k % 3) * 20, st.ico, ptx, c, rgba(P.panel, 0.93), c, 'right');   // sem espaço à direita: a etiqueta vai para a esquerda da linha
+      else kindPill(ctx, x + 3, padT + 22 + (k % 3) * 20, st.ico, ptx, c, rgba(P.panel, 0.93), c);
     });
+    // resultado: losango no preço do leilão, com quantidade e variação sobre o último negócio antes dele
     if (a.ended && a.price != null) {
       const y = Y(a.price * tick);
-      ctx.fillStyle = P.amber; ctx.strokeStyle = P.panel; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(xb, y - 6); ctx.lineTo(xb + 6, y); ctx.lineTo(xb, y + 6); ctx.lineTo(xb - 6, y); ctx.closePath(); ctx.fill(); ctx.stroke();
-      const tx = `${fp(i, a.price)} × ${fqShort(a.qty)}`; ctx.font = '600 11px ' + FONT; const tw = ctx.measureText(tx).width + 10;
-      if (xb + 8 + tw > xr) pill(ctx, xb - 8, y - 8.5, tx, P.amber, rgba(P.panel, 0.92), 'right'); else pill(ctx, xb + 8, y - 8.5, tx, P.amber, rgba(P.panel, 0.92));
+      ctx.fillStyle = col; ctx.strokeStyle = P.panel; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xb, y - 6.5); ctx.lineTo(xb + 6.5, y); ctx.lineTo(xb, y + 6.5); ctx.lineTo(xb - 6.5, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const tx = `${fp(i, a.price)} × ${fqShort(a.qty)}` + (a.refT != null && a.refT !== a.price ? ' · ' + distLbl(i, a.price, a.refT) : ''); ctx.font = '600 11px ' + FONT; const tw = ctx.measureText(tx).width + 10;
+      if (xb + 9 + tw > xr) pill(ctx, xb - 9, y - 8.5, tx, col, rgba(P.panel, 0.93), 'right'); else pill(ctx, xb + 9, y - 8.5, tx, col, rgba(P.panel, 0.93));
     }
   }
 }
@@ -507,8 +582,8 @@ function drawMarkers(ctx, i, t0, t1, X, y, x0, pw) {
   for (const a of i.auctions) {
     const end = a.ended ? a.t1 : a.plannedEnd; if (end < t0 || a.t0 > t1) continue;
     let x = X(a.t0);
-    if (inside(x)) { ctx.fillStyle = P.amber; ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x + 4.5, y + 9); ctx.lineTo(x - 4.5, y + 9); ctx.closePath(); ctx.fill(); }
-    for (const p of a.prorr) { x = X(p.prevEnd); if (!inside(x)) continue; ctx.strokeStyle = P.amber; ctx.beginPath(); ctx.moveTo(x - 4, y + 5); ctx.lineTo(x + 4, y + 5); ctx.moveTo(x, y + 1); ctx.lineTo(x, y + 9); ctx.stroke(); }
+    if (inside(x)) { ctx.fillStyle = P[AUC_KIND[aucKey(a)].col]; ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x + 4.5, y + 9); ctx.lineTo(x - 4.5, y + 9); ctx.closePath(); ctx.fill(); }
+    for (const p of a.prorr) { x = X(p.prevEnd); if (!inside(x)) continue; ctx.strokeStyle = P[prorrSty(p.code).col]; ctx.beginPath(); ctx.moveTo(x - 4, y + 5); ctx.lineTo(x + 4, y + 5); ctx.moveTo(x, y + 1); ctx.lineTo(x, y + 9); ctx.stroke(); }
     if (a.ended) { x = X(a.t1); if (inside(x)) { ctx.fillStyle = P.up; ctx.beginPath(); ctx.arc(x, y + 5, 3.6, 0, 7); ctx.fill(); } }
   }
 }
@@ -539,9 +614,9 @@ function showTip(i, t, x, y, W, H) {
       rows.push(`<div class="r"><i style="background:${col}"></i><span>${name}</span><span>${fp(i, lo)} a ${fp(i, hi)}</span><em>${distLbl(i, lo, c)} / ${distLbl(i, hi, c)} sobre ${fp(i, c)} (${sub})</em></div>`);
     };
     row(P.amber, 'Leilão: último preço', h.ult, baseMethodName(i));
-    row(P.violet, 'Leilão: preço médio', h.med, `média de ${CONFIG.vwapWindowSec} s`);
+    row(P.violet, 'Leilão: preço médio', h.med, `média de ${vwSecOf(i)} s`);
     row(P.gray, 'Estático', h.est, 'fechamento anterior');
-    row(P.rasp, 'Rejeição', h.rej, i.g.rejOnSettle ? 'preço de ajuste' : (i.isOpt ? 'teórico, choque alto' : baseMethodName(i)));
+    row(P.rasp, 'Rejeição', h.rej, i.isOpt ? 'referência, choque alto' : baseMethodName(i));
     const a = i.auctions.find(a => a.t0 <= tt && (a.ended ? a.t1 >= tt : true));
     if (a) {
       const th = a.theoS.at(tt);
@@ -582,14 +657,15 @@ function drawRegua() {
   const C = UI.rc; if (!C || C.w < 30 || C.h < 80) return;
   const E = UI.E, i = UI.focus, P = UI.pal, ctx = C.ctx, W = C.w, H = C.h, t = i.tun, tick = i.tick;
   ctx.setTransform(C.dpr, 0, 0, C.dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-  if (!t.ult || !t.rej) return;
+  const U = t.ult || t.med, UC = t.ult ? P.amber : P.violet;   // DI1: o portão é o túnel de preço médio
+  if (!U || !t.rej) return;
   const rnow = performance.now(), inA = inAuctionLike(i), after = i.state === ST.AFTER, small = W < 90;
   // base animada (recentraliza após o leilão)
-  const baseT = after ? i.afterBand.c : t.ult.c;
+  const baseT = after ? i.afterBand.c : U.c;
   if (UI.reg.base == null || UI.reduced || UI.reg.tk !== i.ticker) { UI.reg.base = baseT; UI.reg.tk = i.ticker; }
   else UI.reg.base += (baseT - UI.reg.base) * 0.08;
   const base = UI.reg.base * tick, pct = v => v * tick / base - 1;
-  const gU = after ? 1e-4 : Math.max(1e-5, pct(t.ult.hi)), gD = after ? 1e-4 : Math.max(1e-5, -pct(t.ult.lo));
+  const gU = after ? 1e-4 : Math.max(1e-5, pct(U.hi)), gD = after ? 1e-4 : Math.max(1e-5, -pct(U.lo));
   const wU = Math.max(gU * 1.25, pct(t.rej.hi)), wD = Math.max(gD * 1.25, -pct(t.rej.lo));
   const RU = wU * 1.4, RD = wD * 1.4, top = 22, bot = H - 14, mid = (top + bot) / 2, hU = mid - top, hD = bot - mid;
   const fz = after ? [0.02, 0.8] : [0.46, 0.84];
@@ -599,23 +675,23 @@ function drawRegua() {
     return up ? mid - f * hU : mid + f * hD;
   };
   const Yv = v => Yp(pct(v));
-  const yGu = Yv(t.ult.hi), yGd = Yv(t.ult.lo), yWu = Yv(t.rej.hi), yWd = Yv(t.rej.lo);
+  const yGu = Yv(U.hi), yGd = Yv(U.lo), yWu = Yv(t.rej.hi), yWd = Yv(t.rej.lo);
   // zonas
   ctx.fillStyle = hatch(ctx, P.rasp, 0.4, C.dpr); ctx.fillRect(0, 0, W, yWu); ctx.fillRect(0, yWd, W, H - yWd);
-  if (!after) { ctx.fillStyle = rgba(P.amber, 0.09); ctx.fillRect(0, yWu, W, yGu - yWu); ctx.fillRect(0, yGd, W, yWd - yGd); }
+  if (!after) { ctx.fillStyle = rgba(UC, 0.09); ctx.fillRect(0, yWu, W, yGu - yWu); ctx.fillRect(0, yGd, W, yWd - yGd); }
   // paredes de rejeição
   ctx.fillStyle = P.rasp; ctx.fillRect(0, yWu - 1.5, W, 3); ctx.fillRect(0, yWd - 1.5, W, 3);
   // portão dourado (túnel de leilão): abre/fecha
   const gateTarget = inA ? 1 : 0; UI.gate.v += (gateTarget - UI.gate.v) * (UI.reduced ? 1 : 0.12);
   if (!after) {
-    ctx.strokeStyle = P.amber; ctx.lineWidth = 2.5;
+    ctx.strokeStyle = UC; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(0, Math.round(yGu) + 0.5); ctx.lineTo(W, Math.round(yGu) + 0.5); ctx.moveTo(0, Math.round(yGd) + 0.5); ctx.lineTo(W, Math.round(yGd) + 0.5); ctx.stroke();
     const gv = UI.gate.v, flash = UI.gate.flash && rnow - UI.gate.flash < 900 ? 1 - (rnow - UI.gate.flash) / 900 : 0;
     if (gv > 0.02) {
-      ctx.fillStyle = P.amber; const gw = W * gv / 2;
+      ctx.fillStyle = UC; const gw = W * gv / 2;
       ctx.fillRect(0, yGu - 3, gw, 6); ctx.fillRect(W - gw, yGu - 3, gw, 6);
       ctx.fillRect(0, yGd - 3, gw, 6); ctx.fillRect(W - gw, yGd - 3, gw, 6);
-      ctx.fillStyle = rgba(P.amber, 0.07 * gv); ctx.fillRect(0, yGu, W, yGd - yGu);
+      ctx.fillStyle = rgba(UC, 0.07 * gv); ctx.fillRect(0, yGu, W, yGd - yGu);
     }
     if (flash > 0) { ctx.fillStyle = rgba(P.amber, 0.35 * flash); ctx.fillRect(0, 0, W, H); }
   }
@@ -626,7 +702,7 @@ function drawRegua() {
   // rótulos
   ctx.font = (small ? '10px ' : '11px ') + FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
   const lab = (v, y, col, above) => { ctx.fillStyle = col; ctx.fillText(distLbl(i, v, UI.reg.base), W - 3, y + (above ? -7 : 7)); };
-  if (!after) { lab(t.ult.hi, yGu, P.amber, true); lab(t.ult.lo, yGd, P.amber, false); }
+  if (!after) { lab(U.hi, yGu, UC, true); lab(U.lo, yGd, UC, false); }
   lab(t.rej.hi, yWu, P.rasp, true); lab(t.rej.lo, yWd, P.rasp, false);
   // proteção e teórico no leilão
   if (inA) {
@@ -712,29 +788,68 @@ function drawDaybar() {
   ctx.fillStyle = P.text; ctx.fillRect(Math.round(x) - 1, by - 5, 2, bh + 8);
   ctx.beginPath(); ctx.moveTo(x - 4, by - 7); ctx.lineTo(x + 4, by - 7); ctx.lineTo(x, by - 2); ctx.closePath(); ctx.fill();
 }
-const TL_COL = s => { const P = UI.pal; return { call: rgba(P.amber, 0.3), cont: rgba(P.up, 0.32), auc: P.amber, prorr: P.amber2, halt: null, after: rgba(P.violet, 0.45) }[s]; };
 function drawTimeline(cv, big) {
   if (!cv) return; const E = UI.E, P = UI.pal, insts = E.insts, n = insts.length;
-  const rowH = big ? 18 : 14, lab = big ? 76 : 68, H = n * rowH + 24;
+  const rowH = big ? 21 : 19, lab = big ? 78 : 70, H = n * rowH + 26;
   cv.parentElement.style.height = H + 'px';
-  const { ctx, w: W } = fitSmall(cv);
+  const { ctx, w: W, dpr } = fitSmall(cv);
   const t0 = E.T.fPre, t1 = DAY('18:30'), X = t => lab + (t - t0) / (t1 - t0) * (W - lab - 8);
   ctx.font = '11px ' + FONT; ctx.textBaseline = 'middle';
   for (let h = 9; h <= 18; h++) { const x = X(h * 3600); ctx.strokeStyle = rgba(P.line2, 0.5); ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, n * rowH); ctx.stroke(); ctx.fillStyle = P.faint; ctx.textAlign = 'center'; ctx.fillText(h + 'h', x, n * rowH + 12); }
   insts.forEach((i, r) => {
-    const y = r * rowH;
+    const y = r * rowH, yy = y + 3, hh = rowH - 6;
+    if (i === UI.focus) { ctx.fillStyle = rgba(P.accent, 0.09); ctx.fillRect(0, y, W, rowH); }
     ctx.fillStyle = i === UI.focus ? P.accent : P.text; ctx.textAlign = 'left'; ctx.font = (i === UI.focus ? '600 ' : '') + '11px ' + FONT;
     ctx.fillText(i.ticker, 4, y + rowH / 2);
+    // faixas de estado: negociação contínua, parado pelo circuit breaker e after-market (os leilões vêm por cima)
     const L = i.stateLog;
     for (let k = 0; k < L.length; k++) {
       const s = L[k].s, a = L[k].t, b = k + 1 < L.length ? L[k + 1].t : E.t;
       if (b <= a) continue; const xa = X(a), xb = Math.max(xa + 1.5, X(b));
-      if (s === 'halt') { ctx.fillStyle = hatch(ctx, P.gray, 0.9, cv._d || 1); ctx.fillRect(xa, y + 2, xb - xa, rowH - 4); continue; }
-      const c = TL_COL(s); if (!c) continue;
-      ctx.fillStyle = c; ctx.fillRect(xa, y + 2, xb - xa, rowH - 4);
-      if (s === 'prorr') { ctx.fillStyle = hatch(ctx, '#000000', 0.3, cv._d || 1); ctx.fillRect(xa, y + 2, xb - xa, rowH - 4); }
+      if (s === 'halt') { ctx.fillStyle = hatch(ctx, P.gray, 0.9, dpr); ctx.fillRect(xa, yy, xb - xa, hh); }
+      else if (s === 'cont') { ctx.fillStyle = rgba(P.up, 0.32); ctx.fillRect(xa, yy, xb - xa, hh); }
+      else if (s === 'after') { ctx.fillStyle = rgba(P.violet, 0.45); ctx.fillRect(xa, yy, xb - xa, hh); }
+    }
+    // leilões e calls: cor do tipo; a parte prorrogada fica hachurada, com um corte em cada prorrogação
+    for (const a of i.auctions) {
+      const K = AUC_KIND[aucKey(a)], col = P[K.col], e = a.ended ? a.t1 : E.t;
+      const xa = X(a.t0), xb = Math.max(X(e), xa + 2.5), xm = Math.min(xb, Math.max(xa + 1, X(a.t0 + a.dur0)));
+      ctx.fillStyle = col; ctx.fillRect(xa, yy, xm - xa, hh);
+      if (xb > xm) {
+        ctx.fillStyle = rgba(col, 0.6); ctx.fillRect(xm, yy, xb - xm, hh);
+        ctx.fillStyle = hatch(ctx, '#000000', 0.32, dpr); ctx.fillRect(xm, yy, xb - xm, hh);
+        for (const p of a.prorr) { const x = X(p.prevEnd); if (x > xa && x < xb) { ctx.fillStyle = P.panel; ctx.fillRect(Math.round(x), yy, 1.5, hh); } }
+      }
+      if (K.call) { ctx.strokeStyle = rgba(P.panel, 0.9); ctx.setLineDash([3, 2]); ctx.lineWidth = 1; ctx.strokeRect(xa + 0.5, yy + 0.5, Math.max(1, xb - xa - 1), hh - 1); ctx.setLineDash([]); }
+      if (xb - xa >= 16) drawIco(ctx, K.ico, xa + 8.5, y + rowH / 2, 11, P.onamb, 1.5);
+      if (a.ended && a.price != null) { ctx.fillStyle = P.text; ctx.beginPath(); ctx.arc(xb, y + rowH / 2, 2.2, 0, 7); ctx.fill(); }
     }
   });
   const xn = X(E.t); ctx.fillStyle = P.text; ctx.fillRect(Math.round(xn), 0, 1.5, n * rowH);
   cv._tl = { X, t0, t1, lab, rowH, n, W };
+}
+/* legenda da linha do tempo: um chip por tipo, mais prorrogação e estados */
+function buildTlLegend() {
+  const el = $('tlLeg'); if (!el) return;
+  el.innerHTML = Object.keys(AUC_KIND).map(k => `<span class="tl-k ak-${k}${AUC_KIND[k].call ? ' call' : ''}" title="${AUC_KIND[k].full}: ${AUC_KIND[k].how}"><i>${icoSVG(AUC_KIND[k].ico)}</i>${AUC_KIND[k].n}</span>`).join('') +
+    '<span class="tl-k tl-prorr" title="Cada corte é uma prorrogação"><i class="sw-h"></i>Prorrogação</span><span class="tl-k tl-cont"><i class="sw-c"></i>Negociando</span><span class="tl-k tl-halt"><i class="sw-b"></i>Parado</span>';
+}
+/* dica ao passar o mouse sobre um leilão da linha do tempo */
+function tlHover(e) {
+  const cv = $('tl'), m = cv._tl, tip = $('tlTip'); if (!m || !tip) return;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, E = UI.E, i = E.insts[Math.floor(y / m.rowH)];
+  const t = m.t0 + (x - m.lab) / (m.W - m.lab - 8) * (m.t1 - m.t0), P = UI.pal;
+  let hit = null;
+  if (i && x > m.lab) for (const a of i.auctions) { const e1 = a.ended ? a.t1 : E.t; if (t >= a.t0 - 20 && t <= e1 + 20 && Math.abs(x - m.X((a.t0 + e1) / 2)) <= Math.max(8, (m.X(e1) - m.X(a.t0)) / 2 + 4)) hit = a; }
+  if (!hit) { tip.hidden = true; return; }
+  const a = hit, K = AUC_KIND[aucKey(a)], col = P[K.col];
+  const row = (c, n, v, em) => `<div class="r"><i style="background:${c}"></i><span>${n}</span><span>${v}</span>${em ? `<em>${em}</em>` : ''}</div>`;
+  let h = `<div class="h"><span>${i.ticker}</span><span>${hms(a.t0)} a ${a.ended ? hms(a.t1) : 'agora'}</span></div>` + row(col, K.full, fadd(Math.round(a.dur0)), a.kind === 'auction' ? E.trigMsg(i, a.trig).replace(/^\S+ entrou em leilão( por quantidade)?: /, '') : K.how);
+  for (const p of a.prorr.slice(0, 5)) h += row(P[prorrSty(p.code).col], '+' + fadd(p.add || 60), hms(p.prevEnd), PRORR_LABEL[p.code] + (p.detail ? ' (' + p.detail + ')' : ''));
+  if (a.prorr.length > 5) h += `<div class="r"><i></i><span>e mais ${a.prorr.length - 5}</span><span></span></div>`;
+  h += a.ended ? (a.price != null ? row(P.text, 'Fechou a', fpr(i, a.price), `${fq(a.qty)} ${unitQ(i)}${a.refT != null ? ' · ' + distLbl(i, a.price, a.refT) + ' sobre ' + fp(i, a.refT) : ''}${a.how === 'supervisao' ? ' · supervisão' : ''}`) : row(P.muted, 'Sem negócio', '', '')) : row(P.amber, 'Em andamento', a.theo != null ? 'teórico ' + fpr(i, a.theo) : 'sem teórico', 'fim previsto ' + hms(a.plannedEnd));
+  tip.innerHTML = h; tip.hidden = false;
+  const bw = tip.offsetWidth || 260, bh = tip.offsetHeight || 100, wr = cv.parentElement.getBoundingClientRect();
+  let lx = x + 14, ly = y + 14; if (lx + bw > wr.width - 4) lx = x - bw - 14; if (ly + bh > wr.height + 140) ly = y - bh - 8;
+  tip.style.left = Math.max(4, lx) + 'px'; tip.style.top = Math.max(2, ly) + 'px';
 }

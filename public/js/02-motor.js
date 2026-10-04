@@ -70,6 +70,8 @@ const PRORR_LABEL = { prot_preco: 'proteção de preço', prot_qtd: 'proteção 
   alt30: 'alteração nos últimos 30 s', alt15: 'alteração nos últimos 15 s', sem_teorico: 'sem preço teórico' };
 const PRORR_SHORT = { prot_preco: 'proteção', prot_qtd: 'proteção por quantidade', alt60: 'alteração no último minuto',
   alt30: 'alteração nos últimos 30 s', alt15: 'alteração nos últimos 15 s', sem_teorico: 'sem teórico' };
+const vwSecOf = i => (i.g && i.g.vwSec) || CONFIG.vwapWindowSec;   // janela do preço médio do grupo
+const fadd = s => s % 60 === 0 ? `${s / 60} min` : `${s} s`;          // "1 min", "30 s"
 const FACT_LABEL = { theo: 'mudou o preço teórico', qty: 'mudou a quantidade teórica', alloc: 'oferta nova mudou o atendimento de outra', imb: 'mudou o saldo não atendido' };
 
 /* ----------------------------- instrumento ----------------------------- */
@@ -113,6 +115,7 @@ class Engine {
     this.oid = 0; this.aid = 0; this.m = 0; this.crash = null; this.silent = false;
     this.setIntensity(opts.intensity || 'normal');
     this.feed = []; this.feedSeq = 0; this.events = []; this.focusTk = null; this.forceLate = null;
+    this.noQty = false;       // modo aula: proteção por quantidade desligada (só a aula de quantidade liga)
     this.quiet = new Set();   // ativos sem ofertas tardias aleatórias no leilão (modo aula: prorrogações controladas)
     this.hook = null;         // função chamada ao fim de cada passo (roteiro das aulas)
     this.stats = { rejPreco: 0, rejQtd: 0, rejOutros: 0, auc: { ult: 0, med: 0, est: 0, qtd: 0 },
@@ -165,12 +168,12 @@ class Engine {
   }
   halfWidthTicks(i) {
     if (i.isOpt) return 8;
-    const g = i.g, p = i.prevCloseT * i.tick;
-    let d = g.ult.pct != null ? p * g.ult.pct : g.ult.abs;
+    const g = i.g, p = i.prevCloseT * i.tick, sp = g.ult || g.med || g.rej;   // DI1 não tem túnel de último preço
+    let d = sp.pct != null ? p * sp.pct : sp.abs;
     if (g.minAmp && !i.isDeriv) d = Math.max(d, CONFIG.minAmplitudeStocks);
     return Math.max(2, d / i.tick);
   }
-  hwNow(i) { const u = i.tun.ult; return u ? Math.max(2, (u.hi - u.lo) / 2) : this.halfWidthTicks(i); }
+  hwNow(i) { const u = i.tun.ult || i.tun.med; return u ? Math.max(2, (u.hi - u.lo) / 2) : this.halfWidthTicks(i); }
   initMMs() {
     const rs = this.rs, B = CONFIG.brokers;
     for (const i of this.insts) {
@@ -296,7 +299,7 @@ class Engine {
     if (i.state === ST.AUC && i.auction) {
       const a = i.auction;
       a.kind = 'call_close'; a.plannedEnd = Math.max(cl, this.t + 1); a.ladder = 0; a.protCount = 0;
-      a.protSpec = i.g.protCall; a.prot = this.protBand(i, a.refT, i.g.protCall); a.flowUntil = a.plannedEnd - 60;
+      a.protSpec = i.g.protCall; a.prot = this.protBand(i, a.refT, i.g.protCall); a.flowUntil = a.plannedEnd - 60; a.rule = this.ruleFor(i, 'call_close');
       this.planLate(a); i.state = ST.CALL; this.logState(i, 'call'); this.stats.calls.call_close++;
       this.feedAdd(i, 'call', `${i.ticker}: o leilão em andamento foi incorporado ao call de fechamento`);
     } else this.startCall(i, 'call_close', cl);
@@ -463,7 +466,7 @@ class Engine {
   doEscada(i, dir) {
     if (!i.g.med) return false;
     i.escada = { dir, left: 5, next: this.t, br: this.rf.pick(CONFIG.brokers) };
-    this.feedAdd(i, 'info', `Escada simulada em ${i.ticker}: agressões pequenas de ${dir > 0 ? 'compra' : 'venda'} em sequência; cada uma passa no túnel do último preço, mas somadas se afastam da média de ${CONFIG.vwapWindowSec} s.`);
+    this.feedAdd(i, 'info', `Escada simulada em ${i.ticker}: agressões pequenas de ${dir > 0 ? 'compra' : 'venda'} em sequência; cada uma passa no túnel do último preço, mas somadas se afastam da média de ${vwSecOf(i)} s.`);
     return true;
   }
   escadaStep(i) {
@@ -479,7 +482,7 @@ class Engine {
   doWhale(i, dir) {
     const hw = this.hwNow(i), L = i.last != null ? i.last : i.refT();
     const target = Math.max(1, L + dir * Math.round(hw * this.rf.range(1.5, 2.1)));
-    const edge = dir > 0 ? i.tun.ult.hi : i.tun.ult.lo;
+    const lim = i.tun.ult || i.tun.med, edge = dir > 0 ? lim.hi : lim.lo;
     return this.doPush(i, dir, edge, target, 'baleia', (q, pulled) =>
       `Baleia simulada em ${i.ticker}: ${dir > 0 ? 'compra' : 'venda'} de ${fq(q)} ${unitQ(i)} com limite ${fpr(i, target)}, grande o bastante para varrer o livro` +
       (pulled ? `. Antes dela, a liquidez recuou: ${pulled} ofertas de ${dir > 0 ? 'venda' : 'compra'} mais distantes foram canceladas` : '') + '.');
@@ -724,15 +727,22 @@ class Engine {
 
   /* ----------------------------- leilão ----------------------------- */
   protBand(i, refT, spec) {
-    const c = refT * i.tick, d = spec.pct != null ? c * spec.pct : spec.abs;
+    const c = refT * i.tick; let d = spec.pct != null ? c * spec.pct : spec.abs;
+    if (spec.min != null && d < spec.min) d = spec.min;
     let hi = Math.round((c + d) / i.tick), lo = Math.round((c - d) / i.tick);
     const mt = i.isOpt ? 3 : 1; // opções baratas: faixa nunca menor que 3 ticks por lado
     if (hi < refT + mt) hi = refT + mt; if (lo > refT - mt) lo = refT - mt;
     return { lo: Math.max(1, lo), hi, c: refT };
   }
+  /* prorrogação por alteração: ações e opções seguem CONFIG.prorrogation (escada didática 60/30/15 s, +1 min);
+     futuros seguem as colunas "Fase Crítica / Extensões / Duração de cada Extensão" das planilhas da B3 */
+  ruleFor(i, kind) {
+    const P = CONFIG.prorrogation, r = kind === 'auction' ? i.g.rule : i.g.callRule;
+    return { ladder: r ? r.ladder : P.ladder, extendSec: r ? r.extendSec : P.extendSec };
+  }
   newAuction(i, kind, trig, refT, protSpec, dur) {
     const t = this.t;
-    const a = { id: ++this.aid, tk: i.ticker, kind, trig, t0: t, plannedEnd: t + dur, dur0: dur, refT, protSpec, prot: this.protBand(i, refT, protSpec),
+    const a = { id: ++this.aid, tk: i.ticker, kind, trig, t0: t, plannedEnd: t + dur, dur0: dur, refT, protSpec, prot: this.protBand(i, refT, protSpec), rule: this.ruleFor(i, kind),
       theo: null, tq: 0, imb: 0, D: 0, S: 0, prorr: [], protCount: 0, noTheo: 0, ladder: 0,
       last: { theo: -1e9, qty: -1e9, alloc: -1e9, imb: -1e9 }, lastAny: -1e9, lastKind: null, changes: [],
       theoS: new Series(1), alloc: new Map(), lateAt: null, flowUntil: dur >= 120 ? t + dur - 60 : t + dur * 0.35,
@@ -745,11 +755,11 @@ class Engine {
     return a;
   }
   planLate(a) {
-    const P = CONFIG.prorrogation, st = a.ladder;
-    if (st >= P.ladder.length || this.quiet.has(a.tk)) { a.lateAt = null; return; }
+    const R = a.rule, st = a.ladder;
+    if (st >= R.ladder.length || this.quiet.has(a.tk)) { a.lateAt = null; return; }
     let p = CONFIG.flow.lateProb[st] * this.I.late;
     if (this.forceLate === a.tk && a.kind === 'call_close') p = 1;
-    const w = P.ladder[st];
+    const w = R.ladder[st];
     a.lateAt = this.rf.chance(Math.min(1, p)) ? a.plannedEnd - 1 - this.rf.u() * Math.max(1, w - 4) : null;
   }
   auctionDuration(i, trig) {
@@ -776,12 +786,12 @@ class Engine {
     const dir = tr.dir > 0 ? 'acima' : 'abaixo', b = tr.base;
     let ref;
     if (tr.kind === 'ult') {
-      if (i.isOpt) ref = `do preço teórico da opção (${fpr(i, b)})`;
+      if (i.isOpt) ref = `do preço de referência da opção (${fpr(i, b)})`;
       else if (i.g.stepped) ref = `do centro do túnel, atualizado em degraus (${fpr(i, b)})`;
       else if (i.g.priceBase === 'CLAST') ref = `do preço-base C-LAST (${fpr(i, b)})`;
       else if (i.g.priceBase === 'MOSTRECENT') ref = `do preço-base most recent (${fpr(i, b)})`;
       else ref = `do último preço (${fpr(i, b)})`;
-    } else if (tr.kind === 'med') ref = `da média dos últimos ${CONFIG.vwapWindowSec} s (${fpr(i, b)})`;
+    } else if (tr.kind === 'med') ref = `da média dos últimos ${vwSecOf(i)} s (${fpr(i, b)})`;
     else ref = `do fechamento anterior (${fpr(i, b)}), túnel estático de ±${fnum(i.g.est.pct * i.staticStep * 100, 0)}%`;
     return `${i.ticker} entrou em leilão: negócio a ${fpr(i, tr.p)} ficaria ${fdist(i, tr.p, b)} ${dir} ${ref}; limite ${fpr(i, tr.bound)}`;
   }
@@ -860,14 +870,14 @@ class Engine {
     return { br, lots: mx / i.lot };
   }
   endCheck(i) {
-    const a = i.auction, P = CONFIG.prorrogation;
+    const a = i.auction, P = CONFIG.prorrogation, R = a.rule, qlim = this.noQty ? Infinity : (i.g.qtyProt != null ? i.g.qtyProt : P.qtyProtectionLots);
     if (a.theo == null || a.tq <= 0) {
       if (a.noTheo < P.maxNoTheo) { a.noTheo++; this.prorrogate(i, a, 'sem_teorico', 'nenhuma compra cruza com venda'); }
       else this.closeAuction(i, a, 'sem_negocio');
       return;
     }
     const pp = a.theo >= a.prot.hi || a.theo <= a.prot.lo;
-    const bm = this.brokerMax(i, a), pq = bm.lots > P.qtyProtectionLots;
+    const bm = this.brokerMax(i, a), pq = bm.lots >= qlim;   // a B3 prorroga ao atingir o parâmetro (exemplo: 500 = 250 + 250)
     if (pp || pq) {
       if (a.protCount >= P.maxProtection) {
         this.stats.sup++; a.sup = true;
@@ -877,26 +887,38 @@ class Engine {
       }
       a.protCount++;
       if (pp) this.prorrogate(i, a, 'prot_preco', `teórico ${fpr(i, a.theo)} ${a.theo >= a.prot.hi ? '≥ limite superior ' + fpr(i, a.prot.hi) : '≤ limite inferior ' + fpr(i, a.prot.lo)}`);
-      else this.prorrogate(i, a, 'prot_qtd', `${bm.br} somaria ${fq(Math.round(bm.lots))} lotes entre compra e venda; limite ${P.qtyProtectionLots}`);
+      else this.prorrogate(i, a, 'prot_qtd', `${bm.br} somaria ${fq(Math.round(bm.lots))} ${i.lot > 1 ? 'lotes' : unitQ(i)} entre compra e venda; parâmetro ${fq(qlim)}`);
       return;
     }
-    if (a.ladder < P.ladder.length) {
-      const w = P.ladder[a.ladder];
+    if (a.ladder < R.ladder.length) {
+      const w = R.ladder[a.ladder];
       if (a.lastAny > a.plannedEnd - w) {
         a.ladder++;
-        this.prorrogate(i, a, ['alt60', 'alt30', 'alt15'][a.ladder - 1], `${FACT_LABEL[a.lastKind] || 'alteração'} às ${hms(a.lastAny)}`);
+        this.prorrogate(i, a, 'alt' + w, `${FACT_LABEL[a.lastKind] || 'alteração'} às ${hms(a.lastAny)}`);
         return;
       }
     }
     this.closeAuction(i, a, 'normal');
   }
+  /* o que endCheck decidiria se o leilão terminasse agora, sem mudar nada (o painel mostra as três conferências) */
+  endPreview(i, a) {
+    const P = CONFIG.prorrogation, R = a.rule, qlim = this.noQty ? Infinity : (i.g.qtyProt != null ? i.g.qtyProt : P.qtyProtectionLots);
+    const hasTheo = a.theo != null && a.tq > 0, bm = this.brokerMax(i, a);
+    const priceOut = hasTheo && (a.theo >= a.prot.hi || a.theo <= a.prot.lo), qtyOut = hasTheo && bm.lots >= qlim;
+    const w = a.ladder < R.ladder.length ? R.ladder[a.ladder] : null, altIn = hasTheo && w != null && a.lastAny > a.plannedEnd - w;
+    let verdict = 'normal';
+    if (!hasTheo) verdict = a.noTheo < P.maxNoTheo ? 'sem_teorico' : 'sem_negocio';
+    else if (priceOut || qtyOut) verdict = a.protCount >= P.maxProtection ? 'supervisao' : (priceOut ? 'prot_preco' : 'prot_qtd');
+    else if (altIn) verdict = 'alt' + w;
+    return { hasTheo, priceOut, qtyOut, altIn, w, br: bm.br, lots: bm.lots, qlim, verdict, ext: R.extendSec, rungsLeft: R.ladder.length - a.ladder };
+  }
   prorrogate(i, a, code, detail) {
-    const prevEnd = a.plannedEnd; a.plannedEnd = prevEnd + CONFIG.prorrogation.extendSec; a.lastProrrT = this.t;
-    a.prorr.push({ t: this.t, code, prevEnd, newEnd: a.plannedEnd, detail, theo: a.theo });
+    const ext = a.rule.extendSec, prevEnd = a.plannedEnd; a.plannedEnd = prevEnd + ext; a.lastProrrT = this.t;
+    a.prorr.push({ t: this.t, code, prevEnd, newEnd: a.plannedEnd, add: ext, detail, theo: a.theo });
     this.stats.prorr[code]++; i.st.prorr++;
     this.logState(i, 'prorr');
     const nome = a.kind === 'call_open' ? 'call de abertura' : (a.kind === 'call_close' ? 'call de fechamento' : (a.kind === 'reopen' ? 'call de reabertura' : 'leilão'));
-    this.feedAdd(i, 'prorr', `${i.ticker}: ${nome} prorrogado +1 min por ${PRORR_LABEL[code]} (${detail}); novo fim às ${hms(a.plannedEnd)}`);
+    this.feedAdd(i, 'prorr', `${i.ticker}: ${nome} prorrogado +${fadd(ext)} por ${PRORR_LABEL[code]} (${detail}); novo fim às ${hms(a.plannedEnd)}`);
     this.emit({ k: 'prorr', tk: i.ticker, code });
     this.planLate(a);
   }
@@ -972,7 +994,7 @@ class Engine {
   /* ----------------------------- túneis ----------------------------- */
   vwAdd(i, p, q) { i.vwT.push(this.t); i.vwP.push(p); i.vwQ.push(q); i.vwPQ += p * q; i.vwSQ += q; }
   vwTrim(i) {
-    const lim = this.t - CONFIG.vwapWindowSec;
+    const lim = this.t - vwSecOf(i);
     while (i.vwH < i.vwT.length && i.vwT[i.vwH] < lim) { i.vwPQ -= i.vwP[i.vwH] * i.vwQ[i.vwH]; i.vwSQ -= i.vwQ[i.vwH]; i.vwH++; }
     if (i.vwH > 4000) { i.vwT = i.vwT.slice(i.vwH); i.vwP = i.vwP.slice(i.vwH); i.vwQ = i.vwQ.slice(i.vwH); i.vwH = 0; }
     if (i.vwSQ <= 0) { i.vwSQ = 0; i.vwPQ = 0; }
@@ -1013,18 +1035,18 @@ class Engine {
   refreshTunnels(i) {
     if (i.state === ST.AFTER) { i.tun.rej = Object.assign({}, i.afterBand); return; }
     const frozen = i.state === ST.AUC || i.state === ST.CALL || i.state === ST.HALT || i.state === ST.CLOSED;
-    if (frozen && i.tun.ult) return; // durante leilão/call os túneis ficam congelados
+    if (frozen && i.tun.rej) return; // durante leilão/call os túneis ficam congelados
     if (i.isOpt) { this.optionTunnels(i); return; }
     const g = i.g, base = this.priceBase(i); i.baseT = base;
     const ma = (!i.isDeriv && g.minAmp) ? CONFIG.minAmplitudeStocks : 0;
-    i.tun.rej = this.band(i, g.rejOnSettle ? i.settleT : base, g.rej, 0);
+    i.tun.rej = this.band(i, base, g.rej, 0);
     let c = base;
     if (g.stepped) {
-      const f = i.fut, hw = (g.ult.pct != null ? base * i.tick * g.ult.pct : g.ult.abs) / i.tick;
+      const f = i.fut, sp = g.ult || g.med, hw = (sp.pct != null ? base * i.tick * sp.pct : sp.abs) / i.tick;
       if (f.center == null || this.t - f.t >= CONFIG.futuresCenter.everySec || Math.abs(base - f.center) >= hw * CONFIG.futuresCenter.moveFrac) { f.center = base; f.t = this.t; }
       c = f.center;
     }
-    i.tun.ult = this.band(i, c, g.ult, ma);
+    i.tun.ult = g.ult ? this.band(i, c, g.ult, ma) : null;   // DI1: a B3 não publica túnel de leilão por último preço
     if (g.med) { const vw = this.vwap(i), mc = vw == null ? c : Math.round(vw); i.tun.med = this.band(i, mc, g.med, ma); i.tun.med.vw = vw; }
     else i.tun.med = null;
     i.tun.est = g.est ? this.band(i, i.prevCloseT, { pct: g.est.pct * i.staticStep }, 0) : null;
@@ -1036,28 +1058,33 @@ class Engine {
     if (cur > mx) mx = cur; if (cur < mn) mn = cur;
     return { mx, mn, cur };
   }
-  /* opções: túnel ASSÍNCRONO — centro = teórico (Black-Scholes) a partir do ativo-objeto;
-     limites = choque de volatilidade sobre a máxima/mínima do objeto numa janela recente */
+  /* opções: túnel ASSÍNCRONO (metodologia de túneis de opções da B3, 13/11/2025).
+     Limite inferior: Black-Scholes com a MÍNIMA do ativo-objeto numa janela (a MÁXIMA, na put) e a volatilidade
+     choqueada para baixo; limite superior: a máxima (a mínima, na put) e a volatilidade para cima. Os choques são
+     relativos (ex.: 45% da volatilidade). Preço de referência (centro) = média dos limites do túnel de leilão.
+     A amplitude mínima de banda (AMB) é somada e subtraída da referência, e vale a faixa mais larga. */
   optionTunnels(i) {
     const u = this.by[i.underlying], w = this.undWindow(u);
     const T = this.optT, r = CONFIG.option.r, K = i.strike, sig = i.iv, g = i.g;
-    const theo = bsPrice(i.cp, w.cur, K, T, r, sig), cT = Math.max(1, Math.round(theo / i.tick));
+    const theo = bsPrice(i.cp, w.cur, K, T, r, sig);
     const shock = sp => {
-      const sHi = w.mx * (1 + sp.spotShock), sLo = w.mn * (1 - sp.spotShock); let hi, lo;
-      if (i.cp === 'C') { hi = bsPrice('C', sHi, K, T, r, sig + sp.volShock); lo = bsPrice('C', sLo, K, T, r, Math.max(0.02, sig - sp.volShock)); }
-      else { hi = bsPrice('P', sLo, K, T, r, sig + sp.volShock); lo = bsPrice('P', sHi, K, T, r, Math.max(0.02, sig - sp.volShock)); }
-      return { lo: Math.max(1, Math.floor(lo / i.tick + 1e-7)), hi: Math.ceil(hi / i.tick - 1e-7) };
+      const sHi = w.mx * (1 + sp.spotShock), sLo = w.mn * (1 - sp.spotShock), vUp = sig * (1 + sp.volShock), vDn = Math.max(0.02, sig * (1 - sp.volShock));
+      return i.cp === 'C' ? { lo: bsPrice('C', sLo, K, T, r, vDn), hi: bsPrice('C', sHi, K, T, r, vUp) }
+                          : { lo: bsPrice('P', sHi, K, T, r, vDn), hi: bsPrice('P', sLo, K, T, r, vUp) };
     };
-    const a = shock(g.ult), rj = shock(g.rej), m1 = CONFIG.option.minHalfTicks, m2 = CONFIG.option.rejMinHalfTicks;
-    i.tun.ult = { lo: Math.max(1, Math.min(a.lo, cT - m1)), hi: Math.max(a.hi, cT + m1), c: cT, S: w.cur, sLo: w.mn, sHi: w.mx };
-    i.tun.rej = { lo: Math.max(1, Math.min(rj.lo, cT - m2)), hi: Math.max(rj.hi, cT + m2), c: cT };
-    i.tun.med = null; i.tun.est = null; i.baseT = cT; i.optTheo = theo;
-    i.baseSrc = `teórico (Black-Scholes) com ${u.ticker} a ${fnum(w.cur, u.dec)}`;
+    const au = shock(g.ult), rj = shock(g.rej), ref = (au.lo + au.hi) / 2;
+    const wide = (b, amb) => ({ lo: Math.min(b.lo, ref - amb), hi: Math.max(b.hi, ref + amb) });
+    const A = wide(au, g.ult.amb), R = wide(rj, g.rej.amb);
+    const c = Math.max(1, Math.round(ref / i.tick)), dn = x => Math.max(1, Math.floor(x / i.tick + 1e-7)), up = x => Math.ceil(x / i.tick - 1e-7);
+    i.tun.ult = { lo: Math.min(dn(A.lo), c - 1), hi: Math.max(up(A.hi), c + 1), c, S: w.cur, sLo: w.mn, sHi: w.mx, ambLo: A.lo === ref - g.ult.amb, ambHi: A.hi === ref + g.ult.amb };
+    i.tun.rej = { lo: Math.min(dn(R.lo), c - 1), hi: Math.max(up(R.hi), c + 1), c };
+    i.tun.med = null; i.tun.est = null; i.baseT = c; i.optTheo = theo;
+    i.baseSrc = `referência (Black-Scholes) com ${u.ticker} a ${fnum(w.cur, u.dec)}`;
   }
   record(i) {
     const h = i.hist, t = this.t, s = i.state;
     if (s === ST.CONT) {
-      const u = i.tun.ult; h.ult.push(t, u.lo, u.hi, u.c);
+      const u = i.tun.ult; if (u) h.ult.push(t, u.lo, u.hi, u.c);
       if (i.tun.med && t - i.medT >= 1) { const m = i.tun.med; h.med.push(t, m.lo, m.hi, m.c); i.medT = t; }
     } else if (s !== ST.PRE) { h.ult.push(t, NaN, NaN, NaN); h.med.push(t, NaN, NaN, NaN); i.medT = -1e9; }
     if (s === ST.CONT || s === ST.AUC || s === ST.CALL || s === ST.AFTER) {
@@ -1163,7 +1190,7 @@ class Engine {
     }
     const range = filled ? (pmin === pmax ? fpr(i, pmin) : `${fpr(i, pmin)} a ${fp(i, pmax)}`) : '';
     if (trig) {
-      const where = trig.kind === 'med' ? 'da média de 60 s' : (trig.kind === 'est' ? 'do fechamento anterior' : 'do preço-base');
+      const where = trig.kind === 'med' ? `da média de ${vwSecOf(i)} s` : (trig.kind === 'est' ? 'do fechamento anterior' : 'do preço-base');
       return { kind: 'trig', trig, msg: `Dispara leilão: negócio a ${fpr(i, trig.p)} ficaria ${fdist(i, trig.p, trig.base)} ${trig.dir > 0 ? 'acima' : 'abaixo'} ${where}, fora do túnel (limite ${fpr(i, trig.bound)})${filled ? `. Antes disso executa ${fq(filled)} a ${range}` : ''}` };
     }
     const outside = o.type === LMT && tu && tu.ult && (o.p > tu.ult.hi || o.p < tu.ult.lo);

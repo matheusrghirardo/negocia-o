@@ -50,7 +50,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
     <div class="hero-text">
       <p class="eyebrow">Simulador educativo · dados fictícios</p>
       <h1 id="heroTitle">Veja os <span class="grad">túneis de negociação</span> da B3 em ação</h1>
-      <p class="lead">Um pregão simulado, do call de abertura ao after-market, mostra na hora quando uma oferta é recusada, quando um negócio vira leilão e por que um leilão é prorrogado. Os preços são fictícios, e os parâmetros são uma versão didática das regras públicas da B3.</p>
+      <p class="lead">Um pregão simulado, do call de abertura ao after-market, mostra na hora quando uma oferta é recusada, quando um negócio vira leilão e por que um leilão é prorrogado. Os preços são fictícios, e os percentuais dos túneis seguem os parâmetros publicados pela B3.</p>
       <div class="hero-cta"><a class="btn big primary" href="#simulador"><i data-lucide="chart-candlestick"></i>Abrir o simulador</a><a class="btn big" href="#aulas"><i data-lucide="graduation-cap"></i>Escolher uma aula guiada</a></div>
       <p class="hero-facts" id="heroFacts"></p>
       <p class="hero-by">Um projeto de estudo de <b>Matheus Ghirardo</b></p>
@@ -100,7 +100,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
   <section class="sim" id="simulador" aria-labelledby="simTitle">
     <div class="wrap sim-intro">
       <h2 class="page-h2" id="simTitle">Pregão simulado</h2>
-      <p class="sec-lead">Simulação educativa com dados fictícios. Parâmetros didáticos inspirados nas regras públicas da B3; confira a versão oficial vigente antes de usar em aula.</p>
+      <p class="sec-lead">Simulação educativa com dados fictícios. Os percentuais dos túneis seguem os parâmetros publicados pela B3 (ações de 18/03/2026, futuros de 2026 e opções de 2023); o fluxo de ordens e as durações dos leilões de ações são didáticos. Confira a versão vigente antes de usar em aula.</p>
     </div>
 
     <div class="sim-bar" id="bar">
@@ -150,6 +150,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
         <div class="map-scroll" id="mapScroll">
           <div class="auc-strip" id="aucStrip">
             <div class="strip-head"><span>Em leilão agora</span><span id="aucCount"></span></div>
+            <div class="strip-kinds" id="aucKinds"></div>
             <div class="blocks" id="aucStripBody"></div>
             <div class="strip-empty" id="aucEmpty">Nenhum ativo em leilão. Quando um negócio sair fora do túnel, o ativo aparece aqui.</div>
           </div>
@@ -230,7 +231,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
             <div class="ffil" id="ffil"></div>
           </div>
           <div class="bpane" id="paneFeed"><div id="feed"></div></div>
-          <div class="bpane" id="paneTl" hidden><div class="tl-wrap" id="tlWrap"><canvas id="tl" aria-label="Linha do tempo dos leilões"></canvas></div></div>
+          <div class="bpane" id="paneTl" hidden><div class="tl-leg" id="tlLeg"></div><div class="tl-wrap" id="tlWrap"><canvas id="tl" aria-label="Linha do tempo dos leilões"></canvas><div class="ctip" id="tlTip" hidden></div></div></div>
           <div class="bpane" id="paneNums" hidden><div class="nums" id="nums"></div></div>
         </section>
         <section class="sec card trades-card" id="secTrades" aria-label="Negócios">
@@ -245,8 +246,9 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
   <section class="wrap page-sec" id="aulas" aria-labelledby="hAulas">
     <div class="sec-head">
       <h2 class="page-h2" id="hAulas">Aulas guiadas</h2>
-      <p class="sec-lead">Micro-cenários com roteiro fixo, em três trilhas. O pregão pausa em cada etapa e explica, com os números da hora, o que aconteceu e por quê. Cada aula termina com um resumo e um teste rápido, e as concluídas ficam marcadas neste navegador.</p>
+      <p class="sec-lead">Micro-cenários com roteiro fixo, em quatro trilhas. O pregão pausa em cada etapa e explica, com os números da hora, o que aconteceu e por quê. Cada aula termina com um resumo e um teste rápido, e as concluídas ficam marcadas neste navegador.</p>
     </div>
+    <div class="les-prog" id="lesProg"></div>
     <div class="les-tabs" id="lesTabs" role="tablist" aria-label="Trilha de aulas"></div>
     <div id="lesGrid"></div>
   </section>
@@ -254,7 +256,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
   <section class="wrap page-sec" id="como-funciona" aria-labelledby="hGuide" hidden>
     <div class="sec-head">
       <h2 class="page-h2" id="hGuide">Como funcionam os túneis</h2>
-      <p class="sec-lead">Cada túnel age num momento diferente: na entrada da oferta, no negócio ou no fim do leilão. No gráfico, eles aparecem em camadas. Dentro do tubo dourado, o negócio sai normalmente. Entre o tubo e a linha vinho, um negócio dispara leilão. Além da linha vinho, compra acima do limite ou venda abaixo dele é recusada.</p>
+      <p class="sec-lead">Cada túnel age num momento diferente: na entrada da oferta, no negócio ou no fim do leilão. Esta página mostra os sete tipos de leilão, como um leilão termina, os cinco túneis, de onde vem o centro de cada um e o que a B3 publica para cada caso.</p>
     </div>
     <div id="guideBody"></div>
   </section>
@@ -522,10 +524,10 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
 
   <section class="wrap page-sec" id="parametros" aria-labelledby="hParam" hidden>
     <div class="sec-head">
-      <h2 class="page-h2" id="hParam">Parâmetros didáticos em uso</h2>
-      <p class="sec-lead">Valores que a simulação usa em cada grupo de ativos. Tudo fica editável no objeto CONFIG, no topo do código.</p>
+      <h2 class="page-h2" id="hParam">Parâmetros em uso</h2>
+      <p class="sec-lead">Os percentuais dos túneis seguem os documentos publicados pela B3 em “Parâmetros dos túneis de negociação”, com a data de cada fonte. O que não consta nesses documentos continua didático. Tudo fica editável no objeto CONFIG, no topo do código.</p>
     </div>
-    <div class="card param-card"><div class="scrollx" id="paramBody"></div></div>
+    <div class="param-card" id="paramBody"></div>
   </section>
 </main>
 
@@ -540,7 +542,7 @@ if (location.protocol === 'file:' && document.querySelector('script[src="/src/ma
       <div>
         <h2 class="foot-h">Fontes</h2>
         <p>As regras de túneis de negociação (rejeição, leilão e proteção), leilões, prorrogações, circuit breaker e opções foram estudadas nos materiais públicos da <a href="https://www.b3.com.br" target="_blank" rel="noopener">B3</a>.</p>
-        <p>Os parâmetros do simulador são aproximações didáticas dessas regras. Confira a versão oficial vigente antes de usar em aula.</p>
+        <p>Os percentuais dos túneis seguem as tabelas e planilhas de parâmetros da B3 (ações de 18/03/2026, futuros de 2026, opções de 2023), com a fonte de cada número na página Parâmetros. O restante (fluxo de ordens, durações dos leilões de ações) é didático. A B3 atualiza esses documentos: confira a versão vigente.</p>
         <p>As ilustrações, os gráficos e os diagramas são desenhos próprios, feitos em código para representar esses conceitos.</p>
       </div>
       <div>

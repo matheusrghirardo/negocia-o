@@ -51,22 +51,22 @@ function buildMap() {
   UI.blocks = {};
   for (const i of E.insts) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'blk';
-    b.innerHTML = `<span class="tk">${i.ticker}</span><span class="px"></span><span class="vr"></span><svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle class="rb" cx="12" cy="12" r="9.5"/><circle class="rf" cx="12" cy="12" r="9.5" pathLength="100"/></svg><span class="badge"></span><span class="rt"></span><span class="pz"></span>`;
+    b.innerHTML = `<span class="tk">${i.ticker}</span><span class="px"></span><span class="vr"></span><svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle class="rb" cx="12" cy="12" r="9.5"/><circle class="rf" cx="12" cy="12" r="9.5" pathLength="100"/><path class="ki" transform="translate(7.5 7.5) scale(.56)"/></svg><span class="badge"></span><span class="kn"></span><span class="rt"></span><span class="pz"></span>`;
     b.addEventListener('click', () => { setFocus(i.ticker); showFocus(); });
     homes[i.mapGroup].appendChild(b);
     UI.blocks[i.ticker] = { el: b, px: b.querySelector('.px'), vr: b.querySelector('.vr'), rf: b.querySelector('.rf'), badge: b.querySelector('.badge'),
-      rt: b.querySelector('.rt'), pz: b.querySelector('.pz'), home: homes[i.mapGroup], inStrip: false, key: '' };
+      rt: b.querySelector('.rt'), pz: b.querySelector('.pz'), kn: b.querySelector('.kn'), ki: b.querySelector('.ki'), kk: '', home: homes[i.mapGroup], inStrip: false, key: '' };
   }
   UI.homes = homes;
 }
 function stripWanted(i) { const a = i.auction; return i.state === ST.AUC || (i.state === ST.CALL && a && (a.prorr.length > 0 || a.kind === 'reopen')); }
 function updateMapDot() { const any = UI.E.insts.some(i => i.state === ST.AUC); $('dotMercado').hidden = !any; }
 function updateMap() {
-  const E = UI.E; let nStrip = 0, moved = false;
+  const E = UI.E, kinds = new Set(); let nStrip = 0, moved = false;
   for (const i of E.insts) {
     const B = UI.blocks[i.ticker], el = B.el, a = i.auction, st = i.state, inA = inAuctionLike(i);
     const cls = 'blk' + (st === ST.AUC ? ' auc' : st === ST.CALL ? ' call' : st === ST.HALT ? ' halt' : st === ST.CLOSED ? ' closed' : st === ST.PRE ? ' pre' : '')
-      + (a && a.prorr.length ? ' prorr' : '') + (i === UI.focus ? ' focus' : '');
+      + (inA ? ' ak-' + aucKey(a) : '') + (a && a.prorr.length ? ' prorr' : '') + (i === UI.focus ? ' focus' : '');
     if (el.className !== cls) el.className = cls;
     const p = dispPriceT(i), showTheo = inA && a.theo != null;
     const key = p + '|' + showTheo;
@@ -77,6 +77,8 @@ function updateMap() {
       el.style.setProperty('--tint', ch >= 0 ? 'var(--up)' : 'var(--down)');
       el.style.setProperty('--tp', (Math.min(1, Math.abs(ch) / 0.04) * 24).toFixed(1) + '%');
     }
+    const kk = inA ? aucKey(a) : '';
+    if (B.kk !== kk) { B.kk = kk; B.kn.textContent = kk ? AUC_KIND[kk].n : ''; if (kk) B.ki.setAttribute('d', AUC_KIND[kk].ico); }
     if (inA) {
       const segStart = a.prorr.length ? a.prorr[a.prorr.length - 1].prevEnd : a.t0, rem = Math.max(0, a.plannedEnd - E.t);
       const frac = clamp(rem / Math.max(1, a.plannedEnd - segStart), 0, 1);
@@ -87,11 +89,12 @@ function updateMap() {
     } else { if (B.rt.textContent) B.rt.textContent = ''; el.title = `${i.ticker}, ${i.name}: ${stateText(i)}`; }
     const want = stripWanted(i);
     if (want !== B.inStrip) { B.inStrip = want; moved = true; if (want) $('aucStripBody').appendChild(el); }
-    if (want) nStrip++;
+    if (want) { nStrip++; if (a) kinds.add(aucKey(a)); }
   }
   if (moved) for (const i of E.insts) { const B = UI.blocks[i.ticker]; if (!B.inStrip) B.home.appendChild(B.el); }
   $('aucStrip').classList.toggle('has', nStrip > 0); $('aucEmpty').hidden = nStrip > 0;
   $('aucCount').textContent = nStrip ? String(nStrip) : '';
+  setHTML('aucKinds', [...kinds].map(k => `<span class="ak sm ak-${k}${AUC_KIND[k].call ? ' call' : ''}">${icoSVG(AUC_KIND[k].ico)}${AUC_KIND[k].n}</span>`).join(''));
   $('dotMercado').hidden = !E.insts.some(i => i.state === ST.AUC);
   if (UI.mapView === 'lista') updateMapList();
 }
@@ -112,13 +115,14 @@ function updateFocusHead() {
   $('fhTk').textContent = i.ticker; $('fhName').textContent = i.name;
   $('fhPx').textContent = (inA && a.theo != null ? 'teórico ' : '') + fpr(i, p);
   const v = $('fhVar'); v.textContent = chgText(i, p); v.className = 'fh-var ' + chgCls(i, p);
-  const st = $('fhState'); st.className = 'chip s-' + i.state; st.textContent = stateText(i);
+  const st = $('fhState'), fk = inA ? aucKey(a) : '', fc = 'chip s-' + i.state + (fk ? ' ak-' + fk : ''); if (st.className !== fc) st.className = fc;
+  const fh = (fk ? icoSVG(AUC_KIND[fk].ico) : '') + stateText(i) + (fk && a.kind === 'auction' ? ' · ' + AUC_KIND[fk].n : ''); if (st._h !== fh) { st._h = fh; st.innerHTML = fh; }
   const key = i.ticker + '|' + i.baseSrc + '|' + i.staticStep;
   if (key !== UI.metaKey) {
     UI.metaKey = key;
     const meta = [`Túneis: <b>${i.g.label}</b>`, `Preço-base: <b>${baseMethodName(i)}</b>`, `Tick <b>${fp(i, 1)}</b>`, `Lote <b>${fq(i.lot)}</b>`];
     if (i.isOpt) meta.push(`Ativo-objeto <b>${i.underlying}</b>, strike <b>${fnum(i.strike, 2)}</b>`);
-    if (i.isFut) meta.push(i.g.rejOnSettle ? `Rejeição sobre o ajuste <b>${fp(i, i.settleT)}</b>` : `Ajuste anterior <b>${fp(i, i.settleT)}</b>`);
+    if (i.isFut) meta.push(`Ajuste anterior <b>${fp(i, i.settleT)}</b>`);
     $('fhMeta').innerHTML = meta.map(m => `<span>${m}</span>`).join('');
   }
 }
@@ -129,84 +133,162 @@ function updatePanel(force) {
   if (key !== UI.panelKey || force) { UI.panelKey = key; if (a) buildAuctionPanel(); else buildLimits(); }
   if (a) fillAuctionPanel(i, a); else fillLimits(i);
 }
+/* texto de "por que" do leilão: o negócio que não saiu (ou o que cada call faz), com os números do momento */
+function aucWhy(i, a) {
+  const E = UI.E, sp = pctSpec(a.protSpec);
+  if (a.kind === 'auction') {
+    const t = E.trigMsg(i, a.trig).replace(/^\S+ entrou em leilão( por quantidade)?: /, '');
+    return t.charAt(0).toUpperCase() + t.slice(1) + '.';
+  }
+  const ref = i.isDeriv ? 'ajuste' : 'fechamento';
+  if (a.kind === 'call_open') return `As ofertas se acumulam até ${hms(a.t0 + a.dur0)}, sem negócios, e o preço de abertura sai deste leilão. Proteção dos calls: ${sp} sobre o ${ref} anterior, ${fpr(i, a.prot.c)}.`;
+  if (a.kind === 'call_close') return `As ofertas se acumulam até ${hms(a.t0 + a.dur0)} e o preço de fechamento sai deste leilão. Proteção dos calls: ${sp} sobre ${fpr(i, a.prot.c)}, o último negócio.`;
+  return `O mercado volta da parada do circuit breaker por um call. Proteção dos calls: ${sp} sobre ${fpr(i, a.prot.c)}.`;
+}
 function buildAuctionPanel() {
-  $('panelBox').innerHTML = `<div class="ap">
-    <div>
-      <div class="ap-why" id="apWhy"></div>
+  $('panelBox').innerHTML = `<div class="ap2">
+    <div class="ap-head">
+      <div class="ap-id"><span class="ak" id="apKind"></span><div class="ap-why" id="apWhy"></div></div>
       <div class="ap-ringbox">
         <div class="ap-ring"><svg viewBox="0 0 24 24" aria-hidden="true"><circle class="rb" cx="12" cy="12" r="10.5"/><circle class="rf" id="apRing" cx="12" cy="12" r="10.5" pathLength="100"/></svg><b id="apCd"></b></div>
         <div class="ap-end" id="apEnd"></div>
       </div>
-      <div class="plist" id="apHist"></div>
     </div>
-    <div>
-      <div class="theo-lbl">Preço teórico</div>
-      <div class="theo-big" id="apTheo"></div>
-      <div class="kv"><span>Quantidade teórica</span><span id="apQ"></span></div>
-      <div class="imb" title="Compra × venda ao preço teórico"><i id="apImb"></i></div>
-      <div class="imb-l"><span id="apD"></span><span id="apS"></span></div>
-      <div class="kv"><span>Saldo não atendido</span><span id="apSaldo"></span></div>
-      <div class="kv"><span>Faixa de proteção</span><span id="apProt"></span></div>
-      <div class="kv"><span id="apProtRef"></span><span class="prot-st" id="apProtSt"></span></div>
-    </div>
-    <div>
-      <div class="lights" id="apLights">
-        <div class="lt" data-f="theo" title="Mudou o preço teórico"><i></i><span>1. Preço teórico</span><small></small></div>
-        <div class="lt" data-f="qty" title="Mudou a quantidade teórica"><i></i><span>2. Qtd. teórica</span><small></small></div>
-        <div class="lt" data-f="alloc" title="Entrou oferta nova que mudou a quantidade atendida de uma oferta anterior"><i></i><span>3. Atendimento</span><small></small></div>
-        <div class="lt" data-f="imb" title="Mudou o saldo não atendido"><i></i><span>4. Saldo</span><small></small></div>
-      </div>
-      <div class="winbox"><canvas id="apWin"></canvas></div>
-      <div class="theobox"><canvas id="apTheoC"></canvas></div>
+    <div class="ap-ruler"><canvas id="apRule" aria-label="Linha do tempo do leilão: duração, prorrogações e janela de alteração"></canvas></div>
+    <div class="ap-cols">
+      <section class="ap-box ap-now">
+        <h4>Preço teórico agora</h4>
+        <div class="theo-big" id="apTheo"></div>
+        <div class="kv"><span>Quantidade teórica</span><span id="apQ"></span></div>
+        <div class="imb" title="Compra × venda ao preço teórico"><i id="apImb"></i></div>
+        <div class="imb-l"><span id="apD"></span><span id="apS"></span></div>
+        <div class="kv"><span>Saldo não atendido</span><span id="apSaldo"></span></div>
+        <div class="kv"><span>Último negócio antes</span><span id="apRef"></span></div>
+        <div class="kv"><span>Teórico sobre ele</span><span id="apVar"></span></div>
+      </section>
+      <section class="ap-box ap-check">
+        <h4>Se acabasse agora <small>o que o sistema confere no fim previsto</small></h4>
+        <ul class="chk3" id="apChecks"></ul>
+        <div class="ap-verd" id="apVerd"></div>
+      </section>
+      <section class="ap-box ap-more">
+        <div class="lights" id="apLights">
+          <div class="lt" data-f="theo" title="Mudou o preço teórico"><i></i><span>1. Preço teórico</span><small></small></div>
+          <div class="lt" data-f="qty" title="Mudou a quantidade teórica"><i></i><span>2. Qtd. teórica</span><small></small></div>
+          <div class="lt" data-f="alloc" title="Entrou oferta nova que mudou a quantidade atendida de uma oferta anterior"><i></i><span>3. Atendimento</span><small></small></div>
+          <div class="lt" data-f="imb" title="Mudou o saldo não atendido"><i></i><span>4. Saldo</span><small></small></div>
+        </div>
+        <div class="theobox"><canvas id="apTheoC"></canvas></div>
+        <div class="plist" id="apHist"></div>
+      </section>
     </div>
   </div>`;
 }
 function fillAuctionPanel(i, a) {
-  const E = UI.E, P = UI.pal;
-  let why;
-  if (a.kind === 'auction') {
-    const tr = a.trig;
-    why = tr.kind === 'qtd' ? `Leilão por quantidade: ${fq(tr.q)} ${unitQ(i)} (limite ${fq(tr.lim)})` : `${TRIG_LABEL[tr.kind]}: ${distLbl(i, tr.p, tr.base)}`;
-  } else why = `${TRIG_LABEL[a.kind]}. Proteção dos calls: ${a.protSpec.pct != null ? '±' + fnum(a.protSpec.pct * 100, 1) + '%' : '±' + fnum(a.protSpec.abs, 2) + ' p.p.'}`;
-  setText('apWhy', why);
+  const E = UI.E, key = aucKey(a), K = AUC_KIND[key], R = a.rule;
+  const ak = $('apKind'), akc = 'ak ak-' + key + (K.call ? ' call' : ''); if (ak.className !== akc) ak.className = akc;
+  setHTML('apKind', icoSVG(K.ico) + `<span>${K.full}</span>`);
+  setText('apWhy', aucWhy(i, a));
   const segStart = a.prorr.length ? a.prorr[a.prorr.length - 1].prevEnd : a.t0, rem = Math.max(0, a.plannedEnd - E.t);
   $('apRing').style.strokeDashoffset = (100 - clamp(rem / Math.max(1, a.plannedEnd - segStart), 0, 1) * 100).toFixed(1);
   setText('apCd', mmss(rem));
   setHTML('apEnd', `Fim previsto <b>${hms(a.plannedEnd)}</b><br>Prorrogações: <b>${a.prorr.length}</b>${a.protCount ? ` (${a.protCount} por proteção; a supervisão abre após ${CONFIG.prorrogation.maxProtection})` : ''}`);
-  const hist = a.prorr.slice(-3).reverse().map(p => `<div><b>+1 min</b> às ${hms(p.prevEnd)}: ${PRORR_LABEL[p.code]} (${p.detail})</div>`).join('');
-  setHTML('apHist', hist || 'Sem prorrogações até agora.');
   setText('apTheo', a.theo != null ? fpr(i, a.theo) : 'sem cruzamento');
   setText('apQ', fq(a.tq));
+  setText('apRef', fpr(i, a.refT)); setText('apVar', a.theo != null ? distLbl(i, a.theo, a.refT) : '—');
   const tot = a.D + a.S; $('apImb').style.width = (tot ? a.D / tot * 100 : 50).toFixed(1) + '%';
   setText('apD', `compra ${fqShort(a.D)}`); setText('apS', `venda ${fqShort(a.S)}`);
   setText('apSaldo', a.theo == null ? '—' : (a.imb === 0 ? 'zero' : `${fq(Math.abs(a.imb))} na ${a.imb > 0 ? 'compra' : 'venda'}`));
-  setText('apProt', `${fp(i, a.prot.lo)} a ${fp(i, a.prot.hi)}`);
-  setText('apProtRef', `sobre ${fp(i, a.prot.c)}`);
-  const out = a.theo != null && (a.theo >= a.prot.hi || a.theo <= a.prot.lo), ps = $('apProtSt');
-  const txt = a.theo == null ? '' : (out ? 'teórico fora: prorroga' : 'teórico dentro');
-  if (ps.textContent !== txt) { ps.textContent = txt; ps.className = 'prot-st ' + (out ? 'out' : 'in'); }
+  // as três conferências do fim previsto
+  const pv = E.endPreview(i, a), unitL = i.lot > 1 ? 'lotes' : unitQ(i);
+  const li = (st, ttl, det, tag) => `<li class="c-${st}"><i>${st === 'ok' ? '✓' : (st === 'no' ? '!' : '–')}</i><div><b>${ttl}</b><span>${det}</span></div><em>${tag}</em></li>`;
+  const c1 = !pv.hasTheo ? li('na', 'Proteção de preço', 'ainda não há preço teórico', 'sem teórico')
+    : li(pv.priceOut ? 'no' : 'ok', 'Proteção de preço', `teórico ${fp(i, a.theo)} · faixa ${fp(i, a.prot.lo)} a ${fp(i, a.prot.hi)} (${pctSpec(a.protSpec)} sobre ${fp(i, a.prot.c)})`, pv.priceOut ? 'prorroga' : 'dentro');
+  const c2 = !isFinite(pv.qlim) ? li('na', 'Proteção por quantidade', 'desligada nesta aula, para o foco ficar no assunto', 'desligada')
+    : !pv.hasTheo ? li('na', 'Proteção por quantidade', 'ainda não há preço teórico', 'sem teórico')
+    : li(pv.qtyOut ? 'no' : 'ok', 'Proteção por quantidade', `${pv.br ? pv.br : 'nenhuma corretora'}: ${fq(Math.round(pv.lots))} ${unitL} atendidos entre compra e venda · parâmetro ${fq(pv.qlim)}`, pv.qtyOut ? 'prorroga' : 'abaixo');
+  const lastAlt = a.lastAny > -1e8 ? `última alteração há ${Math.round(E.t - a.lastAny)} s` : 'nenhuma alteração ainda';
+  const c3 = !R.ladder.length ? li('na', 'Alteração de última hora', 'este leilão não prorroga por alteração, só por proteção', 'não vale')
+    : (pv.w == null ? li('na', 'Alteração de última hora', `as ${R.ladder.length} janelas já foram usadas: só a proteção prorroga`, 'não vale mais')
+    : li(pv.altIn ? 'no' : 'ok', 'Alteração de última hora', `janela da ${a.ladder + 1}ª prorrogação: últimos ${pv.w} s · ${lastAlt}`, pv.altIn ? 'prorroga' : 'sem alteração'));
+  setHTML('apChecks', c1 + c2 + c3);
+  const VD = { sem_teorico: ['n', `Sem preço teórico: prorrogaria +${fadd(pv.ext)}`], sem_negocio: ['g', 'Sem preço teórico e sem prorrogações restantes: encerraria sem negócio'],
+    supervisao: ['g', `A supervisão (simulada) autorizaria o encerramento a ${pv.hasTheo ? fpr(i, a.theo) : ''}`], prot_preco: ['p', `Prorrogaria +${fadd(pv.ext)} por proteção de preço`],
+    prot_qtd: ['p', `Prorrogaria +${fadd(pv.ext)} por proteção por quantidade`], normal: ['ok', `Encerraria a ${pv.hasTheo ? fpr(i, a.theo) : ''} com ${fq(a.tq)} ${unitQ(i)}`] };
+  const vd = VD[pv.verdict] || ['a', `Prorrogaria +${fadd(pv.ext)} por alteração de última hora`];
+  setHTML('apVerd', `<div class="v-${vd[0]}">${vd[1]}</div>`);
+  const hist = a.prorr.slice(-4).reverse().map(p => { const st = prorrSty(p.code); return `<div class="pr"><span class="pc pc-${PRORR_KIND[p.code]}">${icoSVG(st.ico)}+${fadd(p.add || 60)}</span><span>às ${hms(p.prevEnd)}: ${PRORR_LABEL[p.code]} <small>${p.detail}</small></span></div>`; }).join('');
+  setHTML('apHist', hist || '<div class="pr none">Sem prorrogações até agora.</div>');
   const now = performance.now();
   for (const el of $('apLights').children) {
     const f = el.dataset.f, on = now - (UI.lights[f] || -1e9) < 1100;
     el.classList.toggle('on', on);
     const lt = a.last[f]; el.lastElementChild.textContent = lt > -1e8 ? 'há ' + Math.max(0, Math.round(E.t - lt)) + ' s' : '';
   }
-  drawWin(i, a); drawTheo(i, a);
+  drawRule(i, a); drawTheo(i, a);
 }
 function setText(id, s) { const el = $(id); if (el && el.textContent !== s) el.textContent = s; }
 function setHTML(id, s) { const el = $(id); if (el && el._h !== s) { el._h = s; el.innerHTML = s; } }
-function drawWin(i, a) {
-  const cv = $('apWin'); if (!cv) return; const { ctx, w: W, h: H } = fitSmall(cv); const P = UI.pal, E = UI.E;
-  const end = a.plannedEnd, ta = end - 72, tb = end + 3, X = t => (t - ta) / (tb - ta) * W, wins = CONFIG.prorrogation.ladder, st = a.ladder;
-  const y = 15, h = 11;
-  wins.forEach((s, k) => { ctx.fillStyle = rgba(P.amber, 0.1 + k * 0.08 + (k === st ? 0.22 : 0)); ctx.fillRect(X(end - s), y, X(end) - X(end - s), h); });
-  if (st < wins.length) { const s = wins[st]; ctx.strokeStyle = P.amber; ctx.lineWidth = 2; ctx.strokeRect(X(end - s) + 1, y - 1, X(end) - X(end - s) - 2, h + 2); }
-  ctx.font = '10px ' + FONT; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.fillStyle = P.muted;
-  wins.forEach(s => ctx.fillText(s + ' s', X(end - s) + 2, y + h + 2));
-  for (const c of a.changes) { if (c.t < ta || c.t > tb) continue; ctx.fillStyle = P.amber; ctx.fillRect(X(c.t) - 1, y - 3, 2, h + 6); }
-  const xn = X(E.t); if (xn >= 0 && xn <= W) { ctx.fillStyle = P.text; ctx.fillRect(xn - 1, y - 5, 2, h + 10); }
-  ctx.fillStyle = P.text; ctx.font = '11px ' + FONT;
-  ctx.fillText(st < wins.length ? `Decide a ${st + 1}ª prorrogação: alteração nos últimos ${wins[st]} s` : 'Escada esgotada: só a proteção prorroga', 0, 0);
+/* linha do tempo do leilão: em cima o leilão inteiro (duração prevista na cor do tipo e cada prorrogação na cor da causa);
+   embaixo, uma lupa nos últimos segundos, com as janelas de alteração (a "fase crítica") e as mudanças que já aconteceram */
+function drawRule(i, a) {
+  const cv = $('apRule'); if (!cv) return;
+  const { ctx, w: W } = fitSmall(cv), P = UI.pal, E = UI.E;
+  const K = AUC_KIND[aucKey(a)], col = P[K.col], R = a.rule, end = a.plannedEnd, now = E.t;
+  const L = 6, Rr = 10, FS = '600 11px ' + FONT, FN = '10px ' + FONT;
+  const span1 = Math.max(end, now) + Math.max(6, (end - a.t0) * 0.03) - a.t0, X1 = t => L + (t - a.t0) / span1 * (W - L - Rr);
+  // legenda da faixa de cima
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.font = FS; ctx.fillStyle = P.muted;
+  ctx.fillText('O leilão inteiro', L, 0);
+  ctx.textAlign = 'right'; ctx.font = FN; ctx.fillText('início ' + hms(a.t0), W - Rr, 1);
+  const y1 = 17, h1 = 18;
+  ctx.fillStyle = rgba(P.line2, 0.4); ctx.fillRect(L, y1, W - L - Rr, h1);
+  const seg = (ta, tb, c, label, ico) => {
+    const xs = X1(ta), xe = Math.max(xs + 1, X1(tb)), w = xe - xs;
+    ctx.fillStyle = rgba(c, 0.92); ctx.fillRect(xs, y1, w, h1);
+    ctx.fillStyle = P.panel; ctx.fillRect(xs - 0.5, y1, 1, h1);
+    let tx = xs + 5;
+    if (ico && w >= 26) { drawIco(ctx, ico, xs + 11, y1 + h1 / 2, 11, P.onamb, 1.5); tx = xs + 20; }
+    if (label && w - (tx - xs) >= ctx.measureText(label).width + 6) { ctx.font = FS; ctx.fillStyle = P.onamb; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, y1 + h1 / 2 + 0.5); }
+  };
+  ctx.font = FS;
+  seg(a.t0, Math.min(end, a.t0 + a.dur0), col, 'duração ' + fadd(Math.round(a.dur0)), K.ico);
+  for (const p of a.prorr) { const st = prorrSty(p.code); seg(p.prevEnd, p.newEnd, P[st.col], '+' + fadd(p.add || 60), st.ico); }
+  // o que ainda vai acontecer fica mais claro
+  const xn1 = X1(now);
+  ctx.fillStyle = rgba(P.panel, 0.5); ctx.fillRect(xn1, y1, Math.max(0, X1(end) - xn1), h1);
+  ctx.fillStyle = P.text; ctx.fillRect(Math.round(xn1) - 1, y1 - 3, 2, h1 + 6);
+  // bandeira do fim previsto
+  const xe1 = X1(end);
+  ctx.strokeStyle = P.text; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(Math.round(xe1) + 0.5, y1 - 4); ctx.lineTo(Math.round(xe1) + 0.5, y1 + h1 + 4); ctx.stroke();
+  // lupa: últimos segundos
+  const zs = Math.max(45, (R.ladder[0] || 30) * 1.25), zA = end - zs, zB = end + 4, y2 = 64, h2 = 16, X2 = t => L + (t - zA) / (zB - zA) * (W - L - Rr);
+  ctx.strokeStyle = rgba(P.muted, 0.7); ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(Math.max(L, X1(zA)), y1 + h1 + 4); ctx.lineTo(L, y2 - 3); ctx.moveTo(xe1, y1 + h1 + 4); ctx.lineTo(X2(end), y2 - 3); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = FS; ctx.fillStyle = P.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('Lupa: os últimos ' + Math.round(zs) + ' s antes do fim previsto, ' + hms(end), L + 12, y1 + h1 + 10);
+  ctx.fillStyle = rgba(P.line2, 0.4); ctx.fillRect(L, y2, W - L - Rr, h2);
+  // já decorrido dentro da lupa
+  if (now > zA) { ctx.fillStyle = rgba(col, 0.3); ctx.fillRect(L, y2, Math.min(W - Rr, X2(Math.min(now, end))) - L, h2); }
+  // janelas de alteração (cada degrau da escada); a atual fica contornada
+  R.ladder.forEach((w, k) => {
+    const xa = X2(end - w), xb = X2(end), cur = k === a.ladder;
+    ctx.fillStyle = rgba(col, 0.12 + k * 0.1 + (cur ? 0.22 : 0)); ctx.fillRect(xa, y2, xb - xa, h2);
+    if (cur) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(xa + 1, y2 - 1, xb - xa - 2, h2 + 2); }
+    ctx.font = FN; ctx.fillStyle = cur ? P.text : P.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(w + ' s', xa + 2, y2 + h2 + 3);
+  });
+  // alterações já feitas (as quatro luzes) e o agora
+  for (const c of a.changes) { if (c.t < zA || c.t > zB) continue; ctx.fillStyle = P.amber; ctx.fillRect(X2(c.t) - 1, y2 - 3, 2, h2 + 6); }
+  const xn2 = X2(now);
+  if (xn2 >= L && xn2 <= W - Rr) { ctx.fillStyle = P.text; ctx.fillRect(Math.round(xn2) - 1, y2 - 5, 2, h2 + 10); }
+  else { ctx.font = FN; ctx.fillStyle = P.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('faltam ' + mmss(end - now), L + 4, y2 + h2 / 2 + 0.5); }
+  ctx.strokeStyle = P.text; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(Math.round(X2(end)) + 0.5, y2 - 5); ctx.lineTo(Math.round(X2(end)) + 0.5, y2 + h2 + 5); ctx.stroke();
+  // frase da etapa
+  ctx.font = FS; ctx.fillStyle = P.text; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  const msg = !R.ladder.length ? 'Este leilão não prorroga por alteração; só a proteção prorroga.'
+    : (a.ladder < R.ladder.length ? `Uma alteração nos últimos ${R.ladder[a.ladder]} s adia o fim em ${fadd(R.extendSec)} (${a.ladder + 1}ª de ${R.ladder.length} prorrogações por alteração).` : 'As prorrogações por alteração acabaram: só a proteção prorroga.');
+  const room = W - L - Rr, short = !R.ladder.length ? 'Só a proteção prorroga.' : (a.ladder < R.ladder.length ? `Alteração nos últimos ${R.ladder[a.ladder]} s: +${fadd(R.extendSec)} (${a.ladder + 1}ª de ${R.ladder.length}).` : 'Só a proteção prorroga.');
+  ctx.fillText(ctx.measureText(msg).width <= room ? msg : short, L, 100);
 }
 function drawTheo(i, a) {
   const cv = $('apTheoC'); if (!cv) return; const { ctx, w: W, h: H } = fitSmall(cv); const P = UI.pal, E = UI.E;
@@ -227,18 +309,19 @@ function shortSrc(s) {
     .replace(/^(C-LAST|LTP|Most recent): (fechamento anterior|ajuste anterior)$/, '$2');
 }
 function fillLimits(i) {
-  const t = i.tun, P = UI.pal, E = UI.E; if (!t.ult || !t.rej) return;
+  const t = i.tun, P = UI.pal, E = UI.E; if (!t.rej) return;
   const rows = [], g = i.g;
   const cell = (v, c) => v == null ? '—' : `${fp(i, v)} <small>${distLbl(i, v, c)}</small>`;
   const row = (col, dash, name, typ, base, src, lo, hi, c) => rows.push(`<tr title="${typ}"><td><span class="sw" style="border-color:${col};border-top-style:${dash}"></span>${name}</td><td>${base} <small>${src}</small></td><td>${cell(lo, c)}</td><td>${cell(hi, c)}</td></tr>`);
   if (i.state === ST.AFTER) {
     row(P.rasp, 'solid', 'After-market ±2%', 'estático no after', fp(i, i.afterBand.c), 'fechamento', i.afterBand.lo, i.afterBand.hi, i.afterBand.c);
   } else {
-    row(P.rasp, 'solid', 'Rejeição (preço)', g.rejOnSettle ? 'estático no dia, sobre o ajuste' : (i.isOpt ? 'dinâmico assíncrono' : 'dinâmico síncrono'),
-      fp(i, t.rej.c), g.rejOnSettle ? 'ajuste' : (i.isOpt ? 'teórico, choque alto' : shortSrc(i.baseSrc)), t.rej.lo, t.rej.hi, t.rej.c);
-    row(P.amber, 'solid', 'Leilão: último preço', i.isOpt ? 'dinâmico assíncrono' : (g.stepped ? 'dinâmico síncrono, em degraus' : 'dinâmico síncrono'),
-      fp(i, t.ult.c), i.isOpt ? 'teórico, choque moderado' : (g.stepped ? 'centro em degraus' : shortSrc(i.baseSrc)), t.ult.lo, t.ult.hi, t.ult.c);
-    if (t.med) row(P.violet, 'dashed', 'Leilão: preço médio', 'dinâmico síncrono', fp(i, t.med.c), `média ${CONFIG.vwapWindowSec} s`, t.med.lo, t.med.hi, t.med.c);
+    row(P.rasp, 'solid', 'Rejeição (preço)', i.isOpt ? 'dinâmico assíncrono' : 'dinâmico síncrono',
+      fp(i, t.rej.c), i.isOpt ? 'referência, choque alto' : shortSrc(i.baseSrc), t.rej.lo, t.rej.hi, t.rej.c);
+    if (t.ult) row(P.amber, 'solid', 'Leilão: último preço', i.isOpt ? 'dinâmico assíncrono' : (g.stepped ? 'dinâmico síncrono, em degraus' : 'dinâmico síncrono'),
+      fp(i, t.ult.c), i.isOpt ? 'referência, choque moderado' : (g.stepped ? 'centro em degraus' : shortSrc(i.baseSrc)), t.ult.lo, t.ult.hi, t.ult.c);
+    else rows.push(`<tr title="a B3 não publica túnel de leilão por último preço para este contrato"><td><span class="sw" style="border-color:${P.amber};border-top-style:dotted"></span>Leilão: último preço</td><td colspan="3"><small>não existe neste contrato (parâmetros da B3)</small></td></tr>`);
+    if (t.med) row(P.violet, 'dashed', 'Leilão: preço médio', 'dinâmico síncrono', fp(i, t.med.c), `média ${vwSecOf(i)} s`, t.med.lo, t.med.hi, t.med.c);
     if (t.est) row(P.gray, 'dotted', `Estático ±${fnum(g.est.pct * i.staticStep * 100, 0)}%`, 'estático', fp(i, i.prevCloseT), 'fech. anterior', t.est.lo, t.est.hi, t.est.c);
     const ref = i.refT(), pa = E.protBand(i, ref, g.protAuction), pc = E.protBand(i, ref, g.protCall);
     row(P.cyan, 'solid', 'Proteção (leilões)', 'age no fim do leilão; limite já prorroga', fp(i, ref), 'último negócio', pa.lo, pa.hi, ref);
@@ -249,9 +332,9 @@ function fillLimits(i) {
   if ($('limBody') && $('limBody')._h !== html) { $('limBody')._h = html; $('limBody').innerHTML = html; }
   let note = '';
   if (i.state === ST.PRE) note = 'Fora do horário: os limites estão calculados sobre o fechamento anterior. ';
-  if (t.ult.amp && !i.isDeriv) { const b = t.ult.c * i.tick; note += `<b>Amplitude mínima aplicada.</b> ${fnum(g.ult.pct * 100, 1)}% de ${fpr(i, t.ult.c)} daria só R$ ${fnum(b * g.ult.pct, 2)} por lado; em ações vale no mínimo R$ ${fnum(CONFIG.minAmplitudeStocks, 2)}. `; }
-  if (i.isOpt && t.ult.sHi != null) { const u = E.by[i.underlying]; note += `Túnel assíncrono: o centro é o teórico Black-Scholes da opção; os limites saem de um choque de volatilidade sobre a máxima (${fnum(t.ult.sHi, u.dec)}) e a mínima (${fnum(t.ult.sLo, u.dec)}) de ${i.underlying} nos últimos ${CONFIG.option.windowSec} s. Quando ${i.underlying} salta, o túnel se desloca mesmo sem negócio na opção. `; }
-  if (g.stepped) note += `Futuros: o centro do túnel de leilão anda em degraus (a cada ${CONFIG.futuresCenter.everySec} s ou quando o preço percorre metade da meia-largura); último degrau às ${hms(i.fut.t)}. ${g.rejOnSettle ? 'A rejeição usa o preço de ajuste.' : 'A rejeição acompanha o preço-base direto, sem degraus.'} `;
+  if (t.ult && t.ult.amp && !i.isDeriv) { const b = t.ult.c * i.tick; note += `<b>Amplitude mínima aplicada.</b> ${fnum(g.ult.pct * 100, 1)}% de ${fpr(i, t.ult.c)} daria só R$ ${fnum(b * g.ult.pct, 2)} por lado; em ações vale no mínimo R$ ${fnum(CONFIG.minAmplitudeStocks, 2)}. `; }
+  if (i.isOpt && t.ult && t.ult.sHi != null) { const u = E.by[i.underlying]; note += `Túnel assíncrono: os limites saem do Black-Scholes com a máxima (${fnum(t.ult.sHi, u.dec)}) e a mínima (${fnum(t.ult.sLo, u.dec)}) de ${i.underlying} nos últimos ${CONFIG.option.windowSec} s, mais um choque de ${fnum(g.ult.volShock * 100, 0)}% na volatilidade e de ${fnum(g.ult.spotShock * 100, 1)}% no ativo-objeto (rejeição: ${fnum(g.rej.volShock * 100, 0)}% e ${fnum(g.rej.spotShock * 100, 0)}%). O centro é a média entre os limites do leilão. Se a faixa ficar mais estreita que a amplitude mínima de banda (R$ ${fnum(g.ult.amb, 2)} no leilão, R$ ${fnum(g.rej.amb, 2)} na rejeição), vale a amplitude mínima. Quando ${i.underlying} salta, o túnel se desloca mesmo sem negócio na opção. `; }
+  if (g.stepped) note += `Futuros: o centro do túnel de leilão anda em degraus (a cada ${CONFIG.futuresCenter.everySec} s ou quando o preço percorre metade da meia-largura); último degrau às ${hms(i.fut.t)}. A rejeição acompanha o preço-base direto, sem degraus. `;
   if (g.priceBase === 'LTP') note += 'LTP (last trade price): vale o último preço negociado; antes do primeiro negócio do dia, o fechamento anterior. ';
   if (g.priceBase === 'CLAST') note += 'C-LAST: vale o último preço se estiver entre a melhor compra e a melhor venda; se a melhor compra estiver acima dele, vale ela; se a melhor venda estiver abaixo, vale ela. ';
   if (g.priceBase === 'MOSTRECENT') note += `Most recent: vale o que foi atualizado por último entre o último negócio e o preço de referência (${i.type === 'etf' ? 'o valor da carteira' : 'o meio entre a melhor compra e a melhor venda, quando o spread é curto'}), recalculado a cada ${CONFIG.refPriceEverySec} s. `;
@@ -284,7 +367,7 @@ function updateBook() {
   const i = UI.focus, a = i.auction, inA = inAuctionLike(i), t = i.tun, L = 10, U = unitQ(i);
   pollMatchFlash(i);
   const hits = inA ? new Map() : bookHits();
-  const theo = inA ? a.theo : null, ult = i.state === ST.CONT ? t.ult : null, bestA = i.ba(), bestB = i.bb();
+  const theo = inA ? a.theo : null, ult = i.state === ST.CONT ? (t.ult || t.med) : null, bestA = i.ba(), bestB = i.bb();
   // cada lado: os L melhores preços, mais os preços que acabaram de zerar (ficam no lugar até o realce apagar,
   // a não ser que o outro lado já ocupe aquele preço: aí o livro pareceria cruzado)
   const sideRows = (levels, side) => {
@@ -344,7 +427,7 @@ function updateBook() {
   if (moaB.length || moaS.length) html += `<div class="bk-row">${moaCell(moaB, 1)}${moaCell(moaS, -1)}</div>`;
   for (let k = 0; k < N; k++) html += `<div class="bk-row">${slot(bidRows[k], 1)}${slot(askRows[k], -1)}</div>`;
   const tun = []; // limites dos túneis, embaixo das ofertas
-  if (ult) tun.push(`<span class="amb" title="Um negócio fora desta faixa abre leilão">Túnel de leilão ${fp(i, ult.lo)} a ${fp(i, ult.hi)}</span>`);
+  if (ult) tun.push(`<span class="amb" title="Um negócio fora desta faixa abre leilão">${t.ult ? 'Túnel de leilão' : 'Túnel de preço médio'} ${fp(i, ult.lo)} a ${fp(i, ult.hi)}</span>`);
   if (t.rej && (i.state === ST.CONT || i.state === ST.AFTER)) tun.push(`<span class="rsp" title="Compra acima ou venda abaixo desta faixa é recusada na entrada">${i.state === ST.AFTER ? 'Limite do after' : 'Rejeição'} ${fp(i, t.rej.lo)} a ${fp(i, t.rej.hi)}</span>`);
   if (tun.length) html += `<div class="bk-tun">${tun.join('')}</div>`;
   if (!askRows.length && !bidRows.length && !moaB.length && !moaS.length) html =`<div class="bk-empty">${i.state === ST.PRE ? 'O livro abre na pré-abertura.' : (i.state === ST.CLOSED ? 'Livro encerrado: as ofertas do dia expiraram.' : 'Livro vazio.')}</div>`;
@@ -453,7 +536,7 @@ function bolShortcut(k) {
     let lim, name;
     if (inA) { lim = s > 0 ? i.auction.prot.hi : i.auction.prot.lo; name = 'faixa de proteção'; }
     else if (i.state === ST.AFTER) { lim = s > 0 ? i.afterBand.hi : i.afterBand.lo; name = 'limite do after'; }
-    else { lim = s > 0 ? t.ult.hi : t.ult.lo; name = 'túnel de leilão'; }
+    else { const U = t.ult || t.med; lim = s > 0 ? U.hi : U.lo; name = t.ult ? 'túnel de leilão' : 'túnel de preço médio'; }
     const p = k === 'lim' ? lim : Math.max(1, lim + s);
     $('bolP').value = fp(i, p);
     if (k === 'tick' && i.state === ST.CONT) { const d = E.depthTo(i, s, p); $('bolQ').value = fq(Math.min(i.qtyAuction - i.lot, Math.max(defaultQty(i), Math.round(d * 1.1 / i.lot) * i.lot + i.lot))); }
@@ -553,54 +636,145 @@ function sw(kind) {
   return `<svg viewBox="0 0 48 22" aria-hidden="true">${s}</svg>`;
 }
 /* ----------------------------- seções da página: como funciona, parâmetros, aulas ----------------------------- */
+/* ilustração de cada tipo de leilão (240×70): o que acontece com o preço e com o túnel */
+function kindArt(k) {
+  const P = 'class="ka-px"', A = c => `stroke="var(--${c})"`;
+  const art = {
+    ult: `<rect x="2" y="24" width="146" height="24" fill="var(--amberA)"/><path d="M2 24h146M2 48h146" ${A('amber')} stroke-width="2.4"/><path d="M6 38h16v-4h16v3h16v-5h16v4h16v-3h16v-4h16v3h12" ${P}/><path d="M122 32q14 0 22-22" fill="none" ${A('amber')} stroke-width="1.6" stroke-dasharray="3 3"/><path d="M141 14l3-5 3 6" fill="none" ${A('amber')} stroke-width="1.6"/><rect x="150" y="3" width="86" height="64" fill="var(--amberA)" stroke="var(--amber)" stroke-dasharray="4 3"/><text x="158" y="19" class="ka-t" fill="var(--amber)">leilão</text><circle cx="222" cy="12" r="3.5" fill="var(--amber)"/>`,
+    med: `<path d="M2 26h146M2 52h146" ${A('violet')} stroke-width="1.8" stroke-dasharray="6 4"/><path d="M6 40h14v6h14v6h14v6h14v6" fill="none" stroke="var(--muted)" stroke-width="1.3" opacity=".6"/><path d="M6 36h14v2h14v2h14v2h14v2h14v2h14v2h14v2h14v2" ${P} transform="translate(0 -4)" opacity="0"/><path d="M6 38h12v5h12v5h12v5h12v5h12v5h12v4" ${P}/><path d="M104 66l4-6 3 5 4-5" fill="none" ${A('violet')} stroke-width="1.5"/><rect x="150" y="3" width="86" height="64" fill="color-mix(in srgb,var(--violet) 14%,transparent)" stroke="var(--violet)" stroke-dasharray="4 3"/><text x="158" y="19" class="ka-t" fill="var(--violet)">leilão</text>`,
+    est: `<path d="M2 12h146M2 58h146" ${A('gray')} stroke-width="2.2" stroke-dasharray="1 5" stroke-linecap="round"/><path d="M6 46h16v-5h16v-6h16v-6h16v-7h16v-6h16v-5h16" ${P}/><path d="M126 10l8 0" ${A('gray')} stroke-width="1.5"/><rect x="150" y="3" width="86" height="64" fill="color-mix(in srgb,var(--gray) 16%,transparent)" stroke="var(--gray)" stroke-dasharray="4 3"/><text x="158" y="19" class="ka-t" fill="var(--gray)">leilão</text>`,
+    qtd: `<path d="M6 60h52" stroke="var(--line2)"/><rect x="10" y="48" width="9" height="12" fill="var(--muted)" opacity=".55"/><rect x="24" y="44" width="9" height="16" fill="var(--muted)" opacity=".55"/><rect x="38" y="50" width="9" height="10" fill="var(--muted)" opacity=".55"/><rect x="62" y="8" width="22" height="52" fill="var(--coral)"/><path d="M2 26h146" ${A('coral')} stroke-width="1.6" stroke-dasharray="5 3"/><text x="90" y="22" class="ka-t" fill="var(--coral)">limite</text><rect x="150" y="3" width="86" height="64" fill="var(--coralA)" stroke="var(--coral)" stroke-dasharray="4 3"/><text x="158" y="19" class="ka-t" fill="var(--coral)">leilão</text>`,
+    call_open: `<rect x="2" y="6" width="190" height="58" fill="color-mix(in srgb,var(--accent) 10%,transparent)" stroke="var(--accent)" stroke-dasharray="4 3"/><path d="M10 60v-8M18 60v-14M26 60v-18M34 60v-26M42 60v-30M50 60v-22M58 60v-34M66 60v-28M74 60v-38M82 60v-30M90 60v-36" stroke="var(--accent)" stroke-width="3" opacity=".6"/><path d="M96 34h72" ${A('amber')} stroke-width="1.6" stroke-dasharray="2 3"/><text x="8" y="20" class="ka-t" fill="var(--accent)">09:45</text><text x="160" y="20" class="ka-t" fill="var(--accent)" text-anchor="end">10:00</text><path d="M192 6v58" stroke="var(--text)" stroke-width="1.6"/><circle cx="192" cy="34" r="5" fill="var(--amber)"/><path d="M196 34h38" ${P}/>`,
+    call_close: `<path d="M2 30h50" ${P}/><rect x="52" y="6" width="140" height="58" fill="color-mix(in srgb,var(--accent) 10%,transparent)" stroke="var(--accent)" stroke-dasharray="4 3"/><path d="M62 60v-14M72 60v-24M82 60v-18M92 60v-30M102 60v-22M112 60v-34M122 60v-26M132 60v-30" stroke="var(--accent)" stroke-width="3" opacity=".6"/><text x="58" y="20" class="ka-t" fill="var(--accent)">16:55</text><text x="186" y="20" class="ka-t" fill="var(--accent)" text-anchor="end">17:00</text><path d="M192 6v58" stroke="var(--text)" stroke-width="1.6"/><path d="M200 12v34M200 14h22l-5 8 5 8h-22" fill="var(--amber)" stroke="var(--amber)" stroke-width="1.4"/><text x="200" y="62" class="ka-t" fill="var(--muted)">fecha</text>`,
+    reopen: `<path d="M2 30h40" ${P}/><rect x="44" y="6" width="74" height="58" fill="color-mix(in srgb,var(--gray) 22%,transparent)" stroke="var(--gray)"/><path d="M44 6l74 58M44 28l52 36M44 50l30 14M66 6l52 40M88 6l30 22" stroke="var(--gray)" stroke-width="1" opacity=".55"/><text x="81" y="40" class="ka-t" fill="var(--muted)" text-anchor="middle">parado</text><rect x="118" y="6" width="74" height="58" fill="color-mix(in srgb,var(--accent) 10%,transparent)" stroke="var(--accent)" stroke-dasharray="4 3"/><text x="124" y="20" class="ka-t" fill="var(--accent)">call 5 min</text><path d="M192 30h44" ${P}/><circle cx="192" cy="30" r="5" fill="var(--amber)"/>`
+  }[k];
+  return `<svg class="ka" viewBox="0 0 240 70" role="img" aria-label="${AUC_KIND[k].full}">${art}</svg>`;
+}
+/* a figura central da página: do início ao preço único */
+function anatomySVG() {
+  const R = CONFIG.prorrogation.ladder, K = 3.9, end = 720, W = w => w * K;   // 3,9 px por segundo; o desenho vai até o fim previsto
+  const durW = 440, accW = end - durW - 8;
+  return `<svg class="anat" viewBox="0 0 760 216" role="img" aria-label="Linha do tempo de um leilão: duração prevista, janelas de alteração no fim e as três conferências do fim previsto">
+    <text x="8" y="18" class="an-t">O leilão corre até o fim previsto</text>
+    <rect x="8" y="26" width="${durW}" height="24" rx="4" fill="var(--amber)"/><text x="18" y="42" class="an-w">duração prevista (ex.: ${fnum(CONFIG.groups.IBOV.auctionSec / 60, 0)} min em ação do Ibovespa)</text>
+    <rect x="${8 + durW}" y="26" width="${accW}" height="24" fill="var(--amberA)" stroke="var(--amber)" stroke-dasharray="3 3"/><text x="${8 + durW + 10}" y="42" class="an-s" fill="var(--amber)">últimos instantes</text>
+    <path d="M${end} 18v40" stroke="var(--text)" stroke-width="2.5"/><text x="${end - 6}" y="14" class="an-s" text-anchor="end">fim previsto</text>
+    ${R.map((w, k) => `<rect x="${end - W(w)}" y="${58 + k * 9}" width="${W(w)}" height="7" rx="2" fill="var(--amber)" opacity="${0.4 + k * 0.28}"/><text x="${end - W(w) - 5}" y="${64.5 + k * 9}" class="an-s" text-anchor="end">${w} s</text>`).join('')}
+    <text x="8" y="78" class="an-s">Janelas de alteração (a “fase crítica”): uma alteração dentro delas adia o fim em 1 min.</text>
+    <text x="8" y="112" class="an-t">No fim previsto, o sistema confere, nesta ordem</text>
+    <g transform="translate(0 120)">
+      <rect x="8" y="0" width="226" height="58" rx="8" fill="var(--panel2)" stroke="var(--cyan)" stroke-width="1.5"/><text x="18" y="19" class="an-b" fill="var(--cyan)">a. Proteção de preço</text><text x="18" y="35" class="an-s">teórico na borda ou fora da faixa?</text><text x="18" y="50" class="an-s">sim: prorroga +1 min</text>
+      <rect x="266" y="0" width="226" height="58" rx="8" fill="var(--panel2)" stroke="var(--cyan)" stroke-width="1.5"/><text x="276" y="19" class="an-b" fill="var(--cyan)">b. Proteção por quantidade</text><text x="276" y="35" class="an-s">uma corretora atingiu o parâmetro?</text><text x="276" y="50" class="an-s">sim: prorroga +1 min</text>
+      <rect x="524" y="0" width="226" height="58" rx="8" fill="var(--panel2)" stroke="var(--amber)" stroke-width="1.5"/><text x="534" y="19" class="an-b" fill="var(--amber)">c. Alteração na janela</text><text x="534" y="35" class="an-s">algo mudou nos últimos 60/30/15 s?</text><text x="534" y="50" class="an-s">sim: prorroga +1 min (até 3 vezes)</text>
+      <path d="M238 29h24M496 29h24" stroke="var(--muted)" stroke-width="1.6"/><path d="M258 25l5 4-5 4M516 25l5 4-5 4" fill="none" stroke="var(--muted)" stroke-width="1.6"/>
+    </g>
+    <rect x="8" y="188" width="742" height="24" rx="8" fill="color-mix(in srgb,var(--up) 14%,transparent)" stroke="var(--up)" stroke-width="1.2"/><text x="20" y="204" class="an-b" fill="var(--up)">Nenhuma pediu mais tempo: o leilão fecha num preço único, e os túneis se recentralizam.</text>
+  </svg>`;
+}
 function guideHTML() {
-  const G = [
+  const G = CONFIG.groups, A = CONFIG.auctionDuration;
+  const facts = {
+    ult: [['Quando', 'o próximo negócio sairia fora do tubo dourado'], ['Túnel', `±${pctTxt(G.IBOV.ult.pct)}% no Ibovespa/IBrX · ±${pctTxt(G.WIN.ult.pct)}% no mini índice`], ['Duração', `${fnum(G.IBOV.auctionSec / 60, 0)} min em ações do Ibovespa (didático) · ${fadd(G.WIN.auctionSec)} nos futuros`], ['Termina', 'em preço único; os túneis se recentralizam']],
+    med: [['Quando', 'o negócio se afastaria da média dos últimos negócios'], ['Túnel', `±${pctTxt(G.IBOV.med.pct)}% no Ibovespa/IBrX · ±${pctTxt(G.WIN.med.pct)}% no mini índice · DI ±${bps(G.DI1.med)} pb`], ['Janela', `${CONFIG.vwapWindowSec} s nas ações · ${G.WIN.vwSec} s nos futuros mais líquidos`], ['Pega', 'a escada: passos pequenos, soma grande']],
+    est: [['Quando', 'o negócio passaria do limite fixo do dia'], ['Túnel', `±${pctTxt(G.IBOV.est.pct)}% sobre o fechamento anterior (±30% no fracionário)`], ['Duração', `${fnum(A.bigSec / 60, 0)} min se a oscilação passa de ${pctTxt(A.bigOsc)}%; ${fnum(A.extremeSec / 60, 0)} min a partir de ${pctTxt(A.extremeOsc)}%`], ['Depois', 'o estático sobe para o próximo degrau (±20%, ±30%…)']],
+    qtd: [['Quando', 'a oferta é grande demais, seja qual for o preço'], ['Limite', `PETR4: leilão acima de ${fq(CONFIG.instruments[0].qtyAuction)} ações; recusa acima de ${fq(CONFIG.instruments[0].qtyReject)}`], ['Duração', `${fnum(A.qtySec / 60, 0)} min`], ['Atenção', 'a proteção por quantidade soma compra e venda de cada corretora']],
+    call_open: [['Quando', 'pré-abertura: 09:45 a 10:00 nas ações, 08:55 a 09:00 nos futuros'], ['Proteção', `±${pctTxt(G.IBOV.protCall.pct)}% sobre o fechamento anterior (Ibovespa/IBrX); ±${pctTxt(G.SMALL.protCall.pct)}% nos demais papéis`], ['Preço', 'um só, o de abertura, formado pelo teórico'], ['Se estourar', 'prorroga; após 3 vezes a supervisão autoriza']],
+    call_close: [['Quando', '16:55 a 17:00 nas ações e opções'], ['Proteção', `±${pctTxt(G.IBOV.protCall.pct)}% sobre o último negócio (Ibovespa/IBrX)`], ['Preço', 'o de fechamento: vira o fechamento anterior de amanhã'], ['Depois', 'after-market só para o Ibovespa/IBrX, a ±2%']],
+    reopen: [['Quando', `o mercado volta de um circuit breaker (Ibovespa −${pctTxt(CONFIG.circuitBreaker.levels[0].drop)}% ou mais)`], ['Duração', `call de ${CONFIG.circuitBreaker.reopenCallMin} min`], ['Proteção', 'a dos calls, sobre o último negócio antes da parada'], ['Parada', `${CONFIG.circuitBreaker.levels[0].haltMin} min no nível 1, ${CONFIG.circuitBreaker.levels[1].haltMin} min no 2`]]
+  };
+  const kinds = Object.keys(AUC_KIND).map(k => `<article class="card kind-card ak-${k}${AUC_KIND[k].call ? ' call' : ''}">
+      <div class="kc-top"><span class="ak${AUC_KIND[k].call ? ' call' : ''} ak-${k}">${icoSVG(AUC_KIND[k].ico)}<span>${AUC_KIND[k].full}</span></span></div>
+      ${kindArt(k)}
+      <dl class="kc-facts">${facts[k].map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl></article>`).join('');
+  const T = [
     ['rej', 'Túnel de rejeição', 'área vinho hachurada além da linha', 'Age na entrada da oferta: compra acima do limite superior ou venda abaixo do inferior é recusada e nem entra no livro. Existe também um limite de quantidade por oferta. É o mais largo; serve para barrar erro operacional.'],
-    ['ult', 'Túnel de leilão por último preço', 'tubo dourado', 'Age no momento do negócio: se o próximo negócio sairia fora dele, o negócio não acontece e o ativo entra em leilão. Acompanha o preço-base; nos futuros, o centro anda em degraus.'],
-    ['med', 'Túnel de leilão por preço médio', 'índigo tracejado', `Centro na média ponderada dos negócios dos últimos ${CONFIG.vwapWindowSec} s. Pega a escada: vários negócios pequenos que passam um a um no túnel do último preço, mas que somados se afastam da média.`],
+    ['ult', 'Túnel de leilão por último preço', 'tubo dourado', 'Age no momento do negócio: se o próximo negócio sairia fora dele, o negócio não sai e o ativo entra em leilão. Acompanha o preço-base; nos futuros, o centro anda em degraus.'],
+    ['med', 'Túnel de leilão por preço médio', 'índigo tracejado', `Centro na média ponderada dos negócios dos últimos ${CONFIG.vwapWindowSec} s (${G.WIN.vwSec} s nos futuros mais líquidos). Pega a escada: vários negócios pequenos que passam um a um no túnel do último preço, mas que somados se afastam da média.`],
     ['est', 'Túnel estático', 'cinza pontilhado', 'Fixo no dia, sobre o fechamento anterior. Simplificação: depois que um leilão abre além de um degrau, passa a valer o próximo (±10%, ±20%, ±30%…).'],
-    ['prot', 'Túnel de proteção', 'faixa verde-petróleo sobre o bloco de leilão', `Age no encerramento de leilões e calls, sobre o último negócio antes do leilão. Se o teórico estiver no limite ou além, prorroga. Exemplo: parâmetro 2%, referência 100,00, proteção de 98,00 a 102,00; teórico 102,00 ou 97,90 prorroga, 101,50 não. Também prorroga se uma corretora somar mais de ${CONFIG.prorrogation.qtyProtectionLots} lotes entre compra e venda.`],
+    ['prot', 'Túnel de proteção', 'faixa verde-petróleo sobre o bloco de leilão', `Age no encerramento de leilões e calls, sobre o último negócio antes do leilão. Se o teórico estiver no limite ou além, prorroga. Exemplo da B3: parâmetro 2%, referência 100,00, proteção de 98,00 a 102,00; teórico 102,00 ou 98,00 prorroga, 101,50 não. Também prorroga se uma corretora atingir ${CONFIG.prorrogation.qtyProtectionLots} lotes entre compra e venda.`],
     ['theo', 'Preço teórico', 'linha dourada pontilhada', 'Maximiza a quantidade negociada; no empate, deixa o menor desequilíbrio; depois, o mais perto do último negócio. No encerramento, tudo sai a esse preço único (prioridade: MOA, preço, ordem de chegada).'],
-    ['block', 'Bloco de leilão', 'faixa dourada vertical', 'Vai do início ao fim previsto. Cada prorrogação estica o bloco para a direita, com o motivo escrito. Contorno tracejado indica call (abertura, fechamento ou reabertura).']
+    ['block', 'Bloco de leilão', 'faixa na cor do tipo de leilão', 'Vai do início ao fim previsto. A faixa do topo mostra a duração (cor do tipo) e cada prorrogação (cor da causa: verde-petróleo para proteção, dourado para alteração). Contorno tracejado indica call.']
   ];
-  return `<div class="guide-grid">${G.map(([k, t, s, p]) => `<article class="card g-card">${sw(k)}<div><h3>${t}</h3><span class="g-sub">No gráfico: ${s}</span></div><p>${p}</p></article>`).join('')}</div>
+  const clast = `<div class="base-trio">
+    <article class="card"><h3><i class="bt-k">LTP</i>Last traded price</h3><p>O <b>último preço negociado</b>. É o preço-base de todo o mercado à vista na tabela da B3, inclusive ETF. O centro do túnel anda a cada negócio.</p></article>
+    <article class="card"><h3><i class="bt-k">C-LAST</i>Último, limitado pelo livro</h3><p>Vale o último preço se estiver <b>entre a melhor compra e a melhor venda</b>; se a melhor compra estiver acima dele, vale ela; se a melhor venda estiver abaixo, vale ela. A B3 usa em contratos futuros de vencimentos mais longos.</p></article>
+    <article class="card"><h3><i class="bt-k">MR</i>Most recent</h3><p>O <b>último negócio ou o preço de referência</b> (calculado pela bolsa), o que foi atualizado por último. É o centro dos túneis de rejeição e de leilão dos futuros mais líquidos; no início do dia, é o ajuste anterior.</p></article>
+  </div>`;
+  const qprot = `<table class="qprot" aria-label="Exemplo da B3 de proteção por quantidade"><thead><tr><th colspan="3">Compra</th><th colspan="3">Venda</th></tr><tr><th>Preço</th><th>Qtd</th><th>Corretora</th><th>Corretora</th><th>Qtd</th><th>Preço</th></tr></thead><tbody>
+    <tr><td>100,00</td><td>250</td><td class="hl">A</td><td>C</td><td>400</td><td>100,00</td></tr>
+    <tr><td>100,00</td><td>400</td><td>B</td><td class="hl">A</td><td>250</td><td>100,00</td></tr></tbody></table>
+    <p class="qp-n">Parâmetro: 500 contratos. A corretora A aparece com 250 na compra e 250 na venda: <b>250 + 250 = 500</b>, o parâmetro é atingido e o leilão prorroga.</p>`;
+  return `<h3 class="guide-h">Tipos de leilão</h3>
+  <p class="guide-lead">Sete situações levam um ativo a um leilão ou a um call. Cada uma tem a sua cor e o seu ícone, e é assim que aparecem no gráfico, no painel, no mapa e na linha do tempo.</p>
+  <div class="kinds-grid">${kinds}</div>
+  <h3 class="guide-h">Como um leilão termina</h3>
+  <p class="guide-lead">A cada fim previsto, o sistema faz três conferências, sempre na mesma ordem. Se nenhuma pedir mais tempo, o leilão fecha num preço único.</p>
+  <div class="card anat-card"><div class="scrollx">${anatomySVG()}</div></div>
+  <h3 class="guide-h">Os cinco túneis e as marcações do gráfico</h3>
+  <div class="guide-grid">${T.map(([k, t, s, p]) => `<article class="card g-card">${sw(k)}<div><h3>${t}</h3><span class="g-sub">No gráfico: ${s}</span></div><p>${p}</p></article>`).join('')}</div>
+  <h3 class="guide-h">De onde vem o centro do túnel</h3>
+  <p class="guide-lead">O preço-base é o centro dos túneis. A B3 usa três métodos, conforme o ativo.</p>
+  ${clast}
   <div class="g-notes">
     <div>
+    <h3>Pivô e atualização do centro nos futuros</h3>
+    <p>Para cada contrato a B3 define um <b>pivô</b>: o vencimento mais líquido (por exemplo, WINZ25 e WDOZ25 em 2025). Os demais vencimentos têm o centro do túnel recalculado a partir dele, por <b>tempo</b> (a cada X minutos), por <b>percentual</b> de oscilação (ex.: 1%) ou pelo <b>diferencial</b> entre os preços de ajuste. No simulador, o centro do túnel de leilão dos futuros anda em degraus: a cada ${CONFIG.futuresCenter.everySec} s ou quando o preço percorre metade da meia-largura.</p>
     <h3>Por que um leilão prorroga</h3>
-    <p>Contam como alteração: 1) mudou o preço teórico; 2) mudou a quantidade teórica; 3) entrou oferta nova que mudou a quantidade atendida de outra; 4) mudou o saldo não atendido. No fim previsto, a proteção (preço ou quantidade) prorroga primeiro, por 1 min. Senão vale a escada: 1ª prorrogação se houve alteração no último minuto, 2ª nos últimos 30 s, 3ª nos últimos 15 s. Depois da 3ª, só a proteção prorroga. Para não virar laço infinito, após ${CONFIG.prorrogation.maxProtection} prorrogações por proteção a supervisão de mercado (simulada) autoriza a abertura no teórico.</p>
+    <p>Contam como alteração: 1) mudou o preço teórico; 2) mudou a quantidade teórica; 3) entrou oferta nova que mudou a quantidade atendida de outra; 4) mudou o saldo não atendido. No fim previsto, a proteção (preço ou quantidade) prorroga primeiro, por 1 min. Senão vale a escada de ações: 1ª prorrogação se houve alteração no último minuto, 2ª nos últimos 30 s, 3ª nos últimos 15 s. Depois da 3ª, só a proteção prorroga. Nos futuros mais líquidos a B3 publica outra regra: fase crítica de ${CG().WIN.rule.ladder[0]} s e até ${CG().WIN.rule.ladder.length} extensões de ${CG().WIN.rule.extendSec} s. Para não virar laço infinito, após ${CONFIG.prorrogation.maxProtection} prorrogações por proteção a supervisão de mercado (simulada) autoriza a abertura no teórico.</p>
     <p>Durante o leilão, compras com preço igual ou acima do teórico e vendas igual ou abaixo dele não podem ser canceladas nem reduzidas: só melhorar o preço ou aumentar a quantidade. No livro e na boleta, elas aparecem com cadeado.</p>
     </div>
     <div>
-    <h3>Estados no mapa</h3>
-    <p>Borda dourada com anel: em leilão, com o teórico no lugar do último preço. Selo +N: prorrogações (o anel recomeça a cada uma). Contorno tracejado: call. Cinza hachurado: parado pelo circuit breaker. Pulso vinho no canto: uma oferta acabou de ser rejeitada. O fundo é tingido pela variação do dia.</p>
+    <h3>Proteção por quantidade: o exemplo da B3</h3>
+    ${qprot}
     <h3>Classificação dos túneis</h3>
-    <p><b>Estático</b>: fixo no dia (túnel estático, sobre o fechamento anterior). <b>Dinâmico síncrono</b>: segue o preço-base do próprio ativo, que é o LTP (último preço negociado) nas ações e nos ETFs e o most recent nos futuros (rejeição, último preço, preço médio). <b>Dinâmico assíncrono</b>: vem de outro ativo, como nas opções, cujo túnel deriva do teórico calculado a partir de PETR4.</p>
-    </div>
-    <div>
+    <p><b>Estático</b>: fixo no dia (túnel estático, sobre o fechamento anterior). <b>Dinâmico síncrono</b>: segue o preço-base do próprio ativo, que é o LTP (último preço negociado) nas ações e nos ETFs e o most recent nos futuros (rejeição, último preço, preço médio). <b>Dinâmico assíncrono</b>: vem de outro ativo, como nas opções, cujo túnel deriva do Black-Scholes calculado a partir de PETR4.</p>
+    <h3>Estados no mapa</h3>
+    <p>Borda e anel na cor do tipo de leilão, com o ícone do tipo no centro do anel e o teórico no lugar do último preço. Selo +N: prorrogações (o anel recomeça a cada uma). Contorno tracejado: call. Cinza hachurado: parado pelo circuit breaker. Pulso vinho no canto: uma oferta acabou de ser rejeitada. O fundo é tingido pela variação do dia.</p>
     <h3>Limites e arredondamento</h3>
     <p>Rejeição e leilão: limites arredondados ao tick para dentro e inclusivos (preço igual ao limite está dentro). Proteção: arredondada ao tick mais próximo; teórico igual ao limite já prorroga. Em ações, a meia-largura mínima do túnel de leilão é R$ ${fnum(CONFIG.minAmplitudeStocks, 2)} (veja PQNO3).</p>
-    </div>
-    <div>
     <h3>Simplificações</h3>
-    <p>Agentes simulados (formadores de mercado, agressores, dedo gordo, baleia, escada). Oferta a mercado sem contraparte é cancelada. A supervisão encerra o leilão após ${CONFIG.prorrogation.maxProtection} prorrogações por proteção. Durações: ${CONFIG.groups.IBOV.auctionSec / 60} min para ações do Ibovespa/IBrX com oscilação moderada, ${CONFIG.auctionDuration.bigSec / 60} min se ≥ 9%, ${CONFIG.auctionDuration.extremeSec / 60} a ${CONFIG.auctionDuration.extreme2Sec / 60} min se ≥ 50%, ${CONFIG.auctionDuration.qtySec / 60} min por quantidade, ${CONFIG.auctionDuration.futSec / 60} min em futuros e ${CONFIG.auctionDuration.optSec / 60} min em opções. Tudo fica editável no objeto CONFIG, no topo do código.</p>
+    <p>Agentes simulados (formadores de mercado, agressores, dedo gordo, baleia, escada). Oferta a mercado sem contraparte é cancelada. As durações dos leilões de ações são didáticas: ${CONFIG.groups.IBOV.auctionSec / 60} min com oscilação moderada, ${CONFIG.auctionDuration.bigSec / 60} min se ≥ ${pctTxt(CONFIG.auctionDuration.bigOsc)}%, ${CONFIG.auctionDuration.extremeSec / 60} a ${CONFIG.auctionDuration.extreme2Sec / 60} min se ≥ ${pctTxt(CONFIG.auctionDuration.extremeOsc)}%, ${CONFIG.auctionDuration.qtySec / 60} min por quantidade e ${CONFIG.auctionDuration.optSec / 60} min em opções. Em futuros, a duração segue a planilha da B3 (${fadd(CG().WIN.auctionSec)}). Tudo fica editável no objeto CONFIG, no topo do código.</p>
     </div>
   </div>`;
 }
 function paramHTML() {
-  const G = CONFIG.groups, pc = s => !s ? 'nenhum' : (s.pct != null ? '±' + fnum(s.pct * 100, s.pct * 100 % 1 ? 1 : 0) + '%' : (s.abs != null ? '±' + fnum(s.abs, 2) + ' p.p.' : 'choque de vol. ' + (s.volShock >= 0.1 ? 'alto' : 'moderado')));
-  const rows = Object.keys(G).map(k => { const g = G[k]; return `<tr><td>${g.label}</td><td>${pc(g.rej)}${g.rejOnSettle ? ' sobre o ajuste' : ''}</td><td>${pc(g.ult)}</td><td>${pc(g.med)}</td><td>${pc(g.est)}</td><td>${pc(g.protAuction)}</td><td>${pc(g.protCall)}</td><td>${({ CLAST: 'C-LAST', LTP: 'LTP', MOSTRECENT: 'Most recent', TEORICO: 'Teórico (assíncrono)' })[g.priceBase]}</td></tr>`; }).join('');
-  return `<table class="ptab"><thead><tr><th>Grupo</th><th>Rejeição</th><th>Leilão (último)</th><th>Leilão (médio)</th><th>Estático</th><th>Proteção leilão</th><th>Proteção calls</th><th>Preço-base</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const G = CONFIG.groups, pb = s => s.abs != null ? '±' + fnum(s.abs * 100, 0) + ' pb' : '±' + pctTxt(s.pct) + '%';
+  const c = (s, extra) => !s ? '<span class="na">não tem</span>' : pb(s) + (extra || '');
+  const BASE = { LTP: 'LTP', MOSTRECENT: 'Most recent', CLAST: 'C-LAST', TEORICO: 'Black-Scholes (assíncrono)' };
+  const acoes = ['IBOV', 'OUTROS', 'SMALL', 'ETF'].map(k => { const g = G[k]; return `<tr><td>${g.label}</td><td>${c(g.rej)}</td><td>${c(g.est)}</td><td>${c(g.ult)}</td><td>${c(g.med)}</td><td>${c(g.protAuction)}</td><td>${c(g.protCall)}</td><td>${BASE[g.priceBase]}</td></tr>`; }).join('');
+  const fut = ['WIN', 'WDO', 'DI1'].map(k => { const g = G[k], r = g.rule, cr = g.callRule; return `<tr><td>${g.label}</td><td>${c(g.rej)}</td><td>${c(g.ult)}</td><td>${c(g.med)} <small>(${g.vwSec} s)</small></td><td>${c(g.protAuction)}</td><td>${fq(g.qtyProt)}</td><td>${fadd(g.auctionSec)}</td><td>${r.ladder[0]} s · ${r.ladder.length} × ${fadd(r.extendSec)}</td><td>${cr.ladder.length ? cr.ladder[0] + ' s · ' + cr.ladder.length + ' × ' + fadd(cr.extendSec) : 'sem extensão'}</td><td>${BASE[g.priceBase]}</td></tr>`; }).join('');
+  const o = G.OPC;
+  const opc = `<tr><td>${o.label}</td><td>${pctTxt(o.ult.volShock)}% · ${pctTxt(o.rej.volShock)}%</td><td>${pctTxt(o.ult.spotShock)}% · ${pctTxt(o.rej.spotShock)}%</td><td>R$ ${fnum(o.ult.amb, 2)} · R$ ${fnum(o.rej.amb, 2)}</td><td>${pctTxt(o.protAuction.pct)}% ou R$ ${fnum(o.protAuction.min, 2)}</td><td>Black-Scholes (assíncrono)</td></tr>`;
+  const src = (t, u) => `<p class="ptab-src">${t}</p>`;
+  return `<div class="p-block"><h3>Ações e ETF</h3>
+    <div class="card p-card"><div class="scrollx"><table class="ptab"><thead><tr><th>Grupo</th><th>Rejeição</th><th>Estático</th><th>Leilão: último preço</th><th>Leilão: preço médio</th><th>Proteção (leilão)</th><th>Proteção (calls)</th><th>Preço-base</th></tr></thead><tbody>${acoes}</tbody></table></div></div>
+    ${src('Fonte: B3, “Parâmetros para os Túneis de Negociação, Mercado de Ações”, 18/03/2026. Os valores valem para o lado positivo e o negativo. A tabela completa tem mais linhas (BDR, FII, balcão, direitos, fracionário). A amplitude mínima de banda em ações é de R$ 0,10.')}</div>
+  <div class="p-block"><h3>Futuros (vencimento mais líquido de cada contrato)</h3>
+    <div class="card p-card"><div class="scrollx"><table class="ptab"><thead><tr><th>Contrato</th><th>Rejeição</th><th>Leilão: último preço</th><th>Leilão: preço médio</th><th>Proteção (leilão)</th><th>Proteção por quantidade</th><th>Duração do leilão</th><th>Fase crítica · extensões (sessão)</th><th>Fase crítica · extensões (pré-abertura)</th><th>Centro</th></tr></thead><tbody>${fut}</tbody></table></div></div>
+    ${src('Fonte: B3, planilhas de futuros referenciados em índices (01/10/2026), em moedas e em taxa de juros em reais (14/09/2026), grupos W1, W3 e D1. pb = ponto-base (0,01 ponto percentual). O DI não tem túnel de leilão por último preço.')}</div>
+  <div class="p-block"><h3>Opções sobre ações</h3>
+    <div class="card p-card"><div class="scrollx"><table class="ptab"><thead><tr><th>Grupo</th><th>Choque de volatilidade<br><small>leilão · rejeição</small></th><th>Choque no ativo-objeto<br><small>leilão · rejeição</small></th><th>Amplitude mínima de banda<br><small>leilão · rejeição</small></th><th>Proteção (leilão)</th><th>Centro</th></tr></thead><tbody>${opc}</tbody></table></div></div>
+    ${src('Fonte: B3, “Parâmetros para os Túneis de Negociação do Mercado de Opções sobre Ações” (02/10/2023) e “Metodologia dos Túneis de Negociação de Opções” (13/11/2025). Os choques são relativos (45% da volatilidade, por exemplo) e valem para os dois lados.')}</div>
+  <div class="p-cols">
+    <div><h3>O que segue a B3</h3><ul class="p-list"><li>Percentuais dos túneis de ações, futuros e opções, nos grupos mostrados acima.</li><li>Preço-base: LTP nas ações, most recent nos futuros e Black-Scholes nas opções.</li><li>Leilão, fase crítica e extensões dos futuros; proteção por quantidade dos futuros.</li><li>Metodologia das opções: choques relativos, amplitude mínima de banda e centro pela média dos limites.</li></ul></div>
+    <div><h3>O que é didático</h3><ul class="p-list"><li>Duração dos leilões de ações e de opções, e a escada de 60, 30 e 15 s das ações.</li><li>Janela do preço médio das ações (60 s) e o parâmetro da proteção por quantidade em ações.</li><li>Fluxo de ordens, quantidades por oferta em ações, circuit breaker e after-market.</li><li>O estático sobe de degrau depois de um leilão (simplificação).</li></ul></div>
+  </div>
+  <p class="ptab-src">Os documentos oficiais ficam em <a href="https://www.b3.com.br/pt_br/solucoes/plataformas/puma-trading-system/para-participantes-e-traders/regras-e-parametros-de-negociacao/parametros-dos-tuneis-de-negociacao/" target="_blank" rel="noopener">b3.com.br, Parâmetros dos túneis de negociação</a> e a explicação dos conceitos em <a href="https://www.b3.com.br/pt_br/solucoes/plataformas/puma-trading-system/para-participantes-e-traders/regras-e-parametros-de-negociacao/tuneis-de-negociacao/" target="_blank" rel="noopener">Túneis de negociação</a>. A B3 atualiza esses parâmetros com frequência: confira a versão vigente.</p>`;
 }
 function renderGuide() { setHTML('guideBody', guideHTML()); setHTML('paramBody', paramHTML()); }
 function renderLessons() {
-  const done = lesDone();
-  const card = l => { const ok = done.has(l.id); return `<article class="card les-card${ok ? ' done' : ''}">` +
-    `<div class="les-top"><span class="les-n">Aula ${LESSONS.indexOf(l) + 1}</span>${ok ? '<span class="les-ok">✓ Concluída</span>' : ''}</div>` +
+  const done = lesDone(), LV = { 'Básico': 1, 'Intermediário': 2, 'Avançado': 3 };
+  const card = l => { const ok = done.has(l.id), nq = l.quiz2 ? 2 : 1; return `<article class="card les-card${ok ? ' done' : ''}">` +
+    `<div class="les-top"><span class="les-n">Aula ${LESSONS.indexOf(l) + 1}</span><span class="les-lv lv-${LV[l.level] || 1}" title="Nível da aula">${l.level || 'Básico'}</span>${ok ? '<span class="les-ok">✓ Concluída</span>' : ''}</div>` +
     `<h3>${l.title}</h3><p class="les-sub">${l.sub}</p><p class="les-goal"><b>Você vai ver</b> ${l.goal}</p>` +
-    `<div class="les-foot"><button class="btn" data-les="${l.id}">${ok ? 'Refazer' : 'Começar aula'}</button><span class="les-meta">${l.steps.length} etapas, com teste no fim</span></div></article>`; };
+    (l.prereq ? `<p class="les-pre">${l.prereq}</p>` : '') +
+    `<div class="les-foot"><button class="btn" data-les="${l.id}">${ok ? 'Refazer' : 'Começar aula'}</button><span class="les-meta">${l.steps.length} etapas · cerca de ${l.mins || 4} min · ${nq} pergunta${nq > 1 ? 's' : ''}</span></div></article>`; };
   const groups = Object.keys(LES_GRP);
   if (!UI.lesGrp || groups.indexOf(UI.lesGrp) === -1) UI.lesGrp = groups[0];
-  $('lesTabs').innerHTML = groups.map(g => `<button data-g="${g}" role="tab" aria-selected="${g === UI.lesGrp}" class="${g === UI.lesGrp ? 'on' : ''}">${LES_GRP[g].t}</button>`).join('');
+  const cnt = g => { const L = LESSONS.filter(l => l.grp === g); return `${L.filter(l => done.has(l.id)).length}/${L.length}`; };
+  $('lesTabs').innerHTML = groups.map(g => `<button data-g="${g}" role="tab" aria-selected="${g === UI.lesGrp}" class="${g === UI.lesGrp ? 'on' : ''}">${LES_GRP[g].t}<small>${cnt(g)}</small></button>`).join('');
+  const nd = LESSONS.filter(l => done.has(l.id)).length;
+  setHTML('lesProg', `<div class="lp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${LESSONS.length}" aria-valuenow="${nd}"><i style="width:${(nd / LESSONS.length * 100).toFixed(0)}%"></i></div><span><b>${nd} de ${LESSONS.length}</b> aulas concluídas neste navegador</span>`);
   $('lesGrid').innerHTML = groups.map(g => `<div class="les-pane" data-g="${g}"${g === UI.lesGrp ? '' : ' hidden'}><p class="grp-d">${LES_GRP[g].d}</p><div class="les-grid">${LESSONS.filter(l => l.grp === g).map(card).join('')}</div></div>`).join('');
 }
 
@@ -930,10 +1104,10 @@ function showSummary() {
 
 /* ----------------------------- tour ----------------------------- */
 const TOUR = [
-  { el: 'colMap', tab: 'mercado', h: 'Mapa do pregão', p: 'Cada bloco é um ativo. Borda dourada com anel: em leilão. Tracejado: call. Cinza hachurado: parado. Quem entra em leilão sobe para a faixa do topo. Toque num bloco para colocá-lo em foco.' },
+  { el: 'colMap', tab: 'mercado', h: 'Mapa do pregão', p: 'Cada bloco é um ativo. Borda e anel na cor do tipo de leilão (dourado, índigo, cinza, laranja). Azul tracejado: call. Cinza hachurado: parado. Quem entra em leilão sobe para a faixa do topo. Toque num bloco para colocá-lo em foco.' },
   { el: 'chartWrap', tab: 'grafico', h: 'Gráfico-túnel', p: 'O preço anda em degraus dentro do tubo dourado, o túnel de leilão. Se um negócio sairia fora dele, abre-se um bloco de leilão. A área vinho é onde as ofertas são recusadas; a faixa verde-petróleo é a proteção.' },
   { el: 'reguaWrap', tab: 'grafico', h: 'Régua de túneis', p: 'Cada oferta nova entra pela direita até o seu preço. Aceita vira um traço; rejeitada bate na parede vinho e ricocheteia; a que geraria negócio fora do túnel fecha o portão dourado.' },
-  { el: 'panelBox', tab: 'grafico', h: 'Painel do leilão', p: 'Durante um leilão: contagem regressiva, preço teórico, faixa de proteção e as quatro luzes que explicam cada prorrogação. Fora dele, este espaço mostra os limites de cada túnel agora.' },
+  { el: 'panelBox', tab: 'grafico', h: 'Painel do leilão', p: 'Durante um leilão: o tipo do leilão, a contagem regressiva, a linha do tempo com a duração e as prorrogações, o preço teórico, as três conferências do fim previsto (“Se acabasse agora”) e as quatro luzes. Fora dele, este espaço mostra os limites de cada túnel agora.' },
   { el: 'secBook', tab: 'livro', h: 'Livro de ofertas', p: 'Compras à esquerda, vendas à direita; os melhores preços ficam no topo, encostados no meio. Quando sai negócio, o preço acende com a quantidade negociada. Toque numa oferta para negociar com ela na boleta.' }
 ];
 let tourK = -1;
@@ -1034,7 +1208,7 @@ function runScenario(k) {
     }
     case 'gap': {
       newSession(rndSeed(), { gapTicker: 'PETR4', gapPct: 0.075, focus: 'PETR4' });
-      jumpTo(DAY('09:58:30'), 'Indo para 09:58:30…', () => showToast('PETR4 teve notícia durante a madrugada: o teórico do call está ~7,5% acima do fechamento, além da proteção dos calls (±5%). Às 10:00 a abertura é prorrogada.', 9000));
+      jumpTo(DAY('09:58:30'), 'Indo para 09:58:30…', () => showToast('PETR4 teve notícia durante a madrugada: o teórico do call está ~7,5% acima do fechamento, além da proteção dos calls (±' + pctTxt(CONFIG.groups.IBOV.protCall.pct) + '%). Às 10:00 a abertura é prorrogada.', 9000));
       break;
     }
     case 'close': {
@@ -1042,7 +1216,7 @@ function runScenario(k) {
       const tk = i.ticker;
       if (E.t >= E.T.closeCall - 30) { showToast('O call de fechamento já começou. Para repetir, comece um novo pregão.'); return; }
       E.forceLate = tk;
-      jumpTo(DAY('16:54:00'), 'Indo para 16:54…', () => showToast(`${tk}: ofertas tardias vão chegar nas janelas finais do call de fechamento. Veja a escada de prorrogações (60, 30 e 15 s) no painel do leilão.`, 9000));
+      jumpTo(DAY('16:54:00'), 'Indo para 16:54…', () => showToast(`${tk}: ofertas tardias vão chegar nas janelas finais do call de fechamento. Veja a escada de prorrogações (60, 30 e 15 s) na linha do tempo do painel do leilão.`, 9000));
       break;
     }
     case 'after': {
@@ -1067,7 +1241,7 @@ function setFocus(tk) {
 }
 function buildLegendChips() {
   const i = UI.focus, sh = UI.chart.show, m = UI.mobile, items = [['ult', m ? 'Leilão' : (i.isOpt ? 'Leilão (assíncrono)' : (i.g.stepped ? 'Leilão (em degraus)' : 'Túnel de leilão'))], ['med', m ? 'Médio' : 'Preço médio'], ['est', 'Estático'], ['rej', 'Rejeição'], ['prot', 'Proteção']]
-    .filter(([k]) => !((k === 'med' && !i.g.med) || (k === 'est' && !i.g.est)));
+    .filter(([k]) => !((k === 'med' && !i.g.med) || (k === 'est' && !i.g.est) || (k === 'ult' && !i.g.ult)));
   $('chartLegend').innerHTML = items.map(([k, t]) => `<button class="lg ${k}${sh[k] ? '' : ' off'}" data-k="${k}" aria-pressed="${sh[k]}"><i></i>${t}</button>`).join('');
   requestAnimationFrame(syncPadT);
 }
@@ -1231,6 +1405,8 @@ function wire() {
   };
   $('ffil').innerHTML = FEED_FILTERS.map(([k, t]) => `<button data-v="${k}" class="${k === 'todos' ? 'on' : ''}">${t}</button>`).join('');
   $('ffil').onclick = e => { const b = e.target.closest('button[data-v]'); if (!b) return; UI.feedFilter = b.dataset.v; applyFeedFilter(); };
+  $('tl').addEventListener('mousemove', tlHover); $('tl').addEventListener('mouseleave', () => { $('tlTip').hidden = true; });
+  buildTlLegend();
   $('tl').addEventListener('click', e => {
     const cv = $('tl'), m = cv._tl; if (!m) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
     const row = Math.floor(y / m.rowH), i = UI.E.insts[row]; if (!i) return;

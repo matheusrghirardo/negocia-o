@@ -1,0 +1,174 @@
+/* =========================================================================
+   Tela de leilão: tipos de leilão (cor + ícone + nome), painel, mapa,
+   linha do tempo e guia. Cada tipo tem a sua cor (--kc); calls são azuis,
+   com borda tracejada. Cores nunca são o único sinal: todo tipo também
+   tem ícone e nome.
+   ========================================================================= */
+:root{ --coral:#c2410c; --coralA:rgba(194,65,12,.12) }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --coral:#fb923c; --coralA:rgba(251,146,60,.14) } }
+:root[data-theme="dark"]{ --coral:#fb923c; --coralA:rgba(251,146,60,.14) }
+
+.ak-ult{--kc:var(--amber)} .ak-med{--kc:var(--violet)} .ak-est{--kc:var(--gray)} .ak-qtd{--kc:var(--coral)}
+.ak-call_open,.ak-call_close,.ak-reopen{--kc:var(--accent)}
+
+/* ícones de traço (16×16) */
+.ico{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* selo do tipo de leilão */
+.ak{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:3px 10px 3px 7px;border-radius:999px;font-size:12.5px;font-weight:650;line-height:1.3;white-space:nowrap;
+  color:var(--kc,var(--amber));background:color-mix(in srgb,var(--kc,var(--amber)) 13%,transparent);border:1px solid color-mix(in srgb,var(--kc,var(--amber)) 62%,transparent)}
+.ak.call{border-style:dashed}
+.ak.sm{font-size:11px;padding:1px 8px 1px 5px;gap:4px}
+.ak.sm .ico{width:12px;height:12px}
+
+/* cabeçalho do ativo: o chip de estado ganha a cor e o ícone do tipo */
+.chip .ico{width:13px;height:13px}
+.chip.s-AUC[class*="ak-"],.chip.s-CALL[class*="ak-"]{color:var(--kc);border-color:color-mix(in srgb,var(--kc) 70%,transparent);background:color-mix(in srgb,var(--kc) 13%,transparent)}
+
+/* mapa: bloco, anel e selo na cor do tipo; o nome do tipo aparece na faixa "Em leilão agora" */
+.blk.auc,.blk.call{border-color:var(--kc,var(--amber))}
+.blk.auc{box-shadow:inset 0 0 0 1px var(--kc,var(--amber))}
+.blk .px small,.blk .rt{color:var(--kc,var(--amber))}
+.blk .badge{background:var(--kc,var(--amber))}
+.blk .ring .rb{stroke:color-mix(in srgb,var(--kc,var(--amber)) 18%,transparent)}
+.blk .ring .rf{stroke:var(--kc,var(--amber))}
+.blk .ring .ki{fill:none;stroke:var(--kc,var(--amber));stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.blk .kn{display:none;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--kc,var(--amber));margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.auc-strip .blk .kn{display:block;max-width:calc(100% - 38px)}
+.auc-strip .blk{min-height:68px}
+.auc-strip.has .strip-head{color:var(--text)}
+.strip-kinds{display:flex;flex-wrap:wrap;gap:5px;margin:-2px 2px 7px}
+.strip-kinds:empty{display:none}
+
+/* ------------------------------ painel do leilão ------------------------------ */
+.ap2{display:grid;gap:12px}
+.ap-head{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.ap-id{display:grid;gap:6px;min-width:0;flex:1 1 320px;justify-items:start}
+.ap-id .ap-why{justify-self:stretch}
+.ap2 .ap-why{font-size:13px;font-weight:500;color:var(--text);line-height:1.45}
+.ap2 .ap-ringbox{margin-top:0}
+.ap-ruler{position:relative;height:114px;border:1px solid var(--line);border-radius:10px;padding:8px 8px 4px;background:var(--panel2)}
+.ap-ruler canvas{position:absolute;inset:8px 8px 4px 8px;display:block;width:calc(100% - 16px);height:calc(100% - 12px)}
+.ap-cols{display:grid;grid-template-columns:minmax(170px,.85fr) minmax(260px,1.35fr) minmax(220px,1fr);gap:12px;align-items:stretch}
+.ap-box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);min-width:0}
+.ap-box h4{margin:0 0 6px;font-size:12.5px;font-weight:650;color:var(--muted)}
+.ap-box h4 small{display:block;font-weight:400;color:var(--faint);font-size:11px;margin-top:1px}
+.ap-now .theo-big{margin-bottom:4px}
+.ap2 .lights{margin-bottom:2px}
+.ap-more .theobox{margin-top:8px}
+
+.chk3{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.chk3 li{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;align-items:start;font-size:12.5px;line-height:1.35;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel)}
+.chk3 li i{font-style:normal;font-weight:800;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;margin-top:1px}
+.chk3 li b{display:block;font-weight:650}
+.chk3 li span{color:var(--muted);font-size:12px}
+.chk3 li em{font-style:normal;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;white-space:nowrap;margin-top:1px}
+.chk3 .c-ok i{background:color-mix(in srgb,var(--up) 18%,transparent);color:var(--up)}
+.chk3 .c-ok em{background:color-mix(in srgb,var(--up) 13%,transparent);color:var(--up)}
+.chk3 .c-no{border-color:color-mix(in srgb,var(--amber) 70%,transparent)}
+.chk3 .c-no i{background:var(--amber);color:var(--onamb)}
+.chk3 .c-no em{background:var(--amber);color:var(--onamb)}
+.chk3 .c-na i{background:var(--panel2);color:var(--faint);border:1px solid var(--line2)}
+.chk3 .c-na em{background:var(--panel2);color:var(--faint)}
+.ap-verd{margin-top:8px}
+.ap-verd>div{border-radius:9px;padding:8px 10px;font-size:13px;font-weight:650;line-height:1.35}
+.ap-verd .v-ok{background:color-mix(in srgb,var(--up) 14%,transparent);color:var(--up)}
+.ap-verd .v-p{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan)}
+.ap-verd .v-a{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+.ap-verd .v-n,.ap-verd .v-g{background:var(--panel);color:var(--muted);border:1px solid var(--line2)}
+
+/* histórico de prorrogações, na cor da causa */
+.ap2 .plist{margin-top:8px;display:grid;gap:4px}
+.pr{display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.4}
+.pr.none{color:var(--faint)}
+.pr small{color:var(--faint)}
+.pc{display:inline-flex;align-items:center;gap:3px;border-radius:6px;padding:1px 6px 1px 4px;font-weight:700;font-size:11px;flex:none;white-space:nowrap}
+.pc .ico{width:11px;height:11px}
+.pc-prot{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 14%,transparent)}
+.pc-alt{color:var(--amber);background:color-mix(in srgb,var(--amber) 15%,transparent)}
+.pc-none{color:var(--muted);background:var(--panel)}
+
+/* ------------------------------ linha do tempo dos leilões ------------------------------ */
+.tl-leg{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 12px 4px;font-size:12px;color:var(--muted)}
+.tl-k{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tl-k i{display:inline-grid;place-items:center;width:20px;height:16px;border-radius:5px;background:var(--kc,var(--line2));color:var(--onamb)}
+.tl-k i .ico{width:12px;height:12px}
+.tl-k.call i{outline:1px dashed color-mix(in srgb,var(--panel) 85%,transparent);outline-offset:-3px}
+.tl-k .sw-h{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--amber) 55%,transparent) 0 3px,rgba(0,0,0,.35) 3px 5px)}
+.tl-k .sw-c{background:color-mix(in srgb,var(--up) 32%,transparent)}
+.tl-k .sw-b{background:repeating-linear-gradient(135deg,var(--gray) 0 3px,var(--panel) 3px 6px)}
+
+/* ------------------------------ responsivo ------------------------------ */
+@media (max-width:1100px){
+  .ap-cols{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+  .ap-more{grid-column:1/-1}
+}
+@media (max-width:640px){
+  .ap-cols{grid-template-columns:minmax(0,1fr)}
+  .ap-ruler{height:122px}
+  .chk3 li{grid-template-columns:20px minmax(0,1fr)}
+  .chk3 li em{grid-column:2;justify-self:start}
+}
+
+/* ------------------------------ aulas: nível, progresso, nota da B3 e teste ------------------------------ */
+.les-lv{font:600 11px/1 var(--prose);border-radius:999px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);margin-left:auto;margin-right:8px;white-space:nowrap}
+.les-lv.lv-1{color:var(--up);border-color:color-mix(in srgb,var(--up) 45%,transparent)}
+.les-lv.lv-2{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 55%,transparent)}
+.les-lv.lv-3{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 55%,transparent)}
+.les-pre{margin:-6px 0 8px;font:400 12.5px/1.4 var(--prose);color:var(--faint)}
+.les-prog{display:flex;align-items:center;gap:12px;margin:0 0 14px;font:400 13px/1.3 var(--prose);color:var(--muted);flex-wrap:wrap}
+.les-prog b{color:var(--text)}
+.lp-bar{flex:0 1 220px;min-width:120px;height:8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+.lp-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--up),var(--accent));border-radius:999px}
+.les-tabs button small{margin-left:7px;font-size:11px;font-weight:600;opacity:.75}
+.ls-b3{margin:0 0 12px;padding:9px 11px;border-radius:9px;border:1px solid color-mix(in srgb,var(--cyan) 45%,transparent);background:color-mix(in srgb,var(--cyan) 9%,transparent);font-size:12.5px;line-height:1.5;color:var(--text)}
+.ls-b3>b:first-child{display:block;margin-bottom:3px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--cyan)}
+.lq+.lq{margin-top:12px}
+.lq-score{margin:12px 0 0!important;padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.45}
+.lq-score.ok{background:color-mix(in srgb,var(--up) 12%,transparent);color:var(--text)}
+.lq-score.no{background:color-mix(in srgb,var(--amber) 14%,transparent);color:var(--text)}
+
+/* ------------------------------ página "Como funciona": tipos de leilão, anatomia, preço-base ------------------------------ */
+.guide-h{font:650 21px/1.3 var(--prose);letter-spacing:-.012em;margin:34px 0 4px}
+.guide-h:first-child{margin-top:0}
+.guide-lead{margin:0 0 14px;font:400 15px/1.6 var(--prose);color:var(--muted);max-width:72ch}
+.kinds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.kind-card{display:flex;flex-direction:column;gap:10px;padding:14px 14px 12px;border-top:3px solid var(--kc,var(--amber))}
+.kind-card.call{border-top-style:dashed}
+.kc-top{display:flex}
+.ka{width:100%;height:auto;display:block;border-radius:8px;background:var(--panel2)}
+.ka-px{fill:none;stroke:var(--text);stroke-width:1.7;stroke-linejoin:round}
+.ka-t{font:600 10px var(--prose)}
+.kc-facts{margin:0;display:grid;gap:5px}
+.kc-facts div{display:grid;grid-template-columns:68px minmax(0,1fr);gap:8px;font-size:12.5px;line-height:1.4}
+.kc-facts dt{color:var(--kc,var(--amber));font-weight:700}
+.kc-facts dd{margin:0;color:var(--text)}
+.anat-card{padding:12px 14px}
+.anat{display:block;min-width:600px;width:100%;height:auto}
+.an-t{font:650 13px var(--prose);fill:var(--text)}
+.an-w{font:600 11px var(--prose);fill:var(--onamb)}
+.an-s{font:400 11.5px var(--prose);fill:var(--muted)}
+.an-b{font:650 12.5px var(--prose)}
+.base-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.base-trio .card{padding:14px 16px}
+.base-trio h3{margin:0 0 6px;font:650 15px/1.3 var(--prose);display:flex;align-items:center;gap:9px}
+.base-trio p{margin:0;font:400 14px/1.6 var(--prose)}
+.bt-k{font-style:normal;font:700 11px var(--mono);border-radius:6px;padding:3px 7px;background:var(--amberA);color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 50%,transparent)}
+.qprot{border-collapse:collapse;font-size:13px;margin:4px 0 8px}
+.qprot th,.qprot td{border:1px solid var(--line);padding:5px 12px;text-align:center}
+.qprot th{background:var(--panel2);font-weight:600;color:var(--muted)}
+.qprot td.hl{background:var(--amberA);color:var(--amber);font-weight:700}
+.qp-n{margin:0 0 10px!important;font-size:14px!important}
+.p-block{margin:0 0 24px}
+.p-block h3{font:650 17px/1.3 var(--prose);margin:0 0 8px;letter-spacing:-.005em}
+.p-card{padding:4px 0}
+.p-card .ptab{font-size:13.5px;min-width:720px}
+.p-card .ptab th,.p-card .ptab td{padding:9px 12px;white-space:normal}
+.p-card .ptab th small{font-weight:400;color:var(--faint)}
+.ptab .na{color:var(--faint)}
+.ptab small{color:var(--faint)}
+.ptab-src{margin:8px 2px 0;font:400 12.5px/1.55 var(--prose);color:var(--muted);max-width:90ch}
+.p-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 40px;margin:6px 0 14px}
+.p-cols h3{font:650 16px/1.3 var(--prose);margin:10px 0 6px}
+.p-list{margin:0;padding-left:18px;display:grid;gap:5px;font:400 14px/1.55 var(--prose)}
+@media (max-width:760px){ .p-cols{grid-template-columns:minmax(0,1fr)} .kc-facts div{grid-template-columns:60px minmax(0,1fr)} }

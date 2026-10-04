@@ -5,6 +5,7 @@ import '@fontsource-variable/geist-mono';
 import 'katex/dist/katex.min.css';
 import './styles/base.css';
 import './styles/moderno.css';
+import './styles/leilao.css';
 import katex from 'katex';
 import {
   createIcons, createElement,
