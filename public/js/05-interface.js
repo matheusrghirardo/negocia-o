@@ -118,7 +118,7 @@ function updateFocusHead() {
     UI.metaKey = key;
     const meta = [`Túneis: <b>${i.g.label}</b>`, `Preço-base: <b>${baseMethodName(i)}</b>`, `Tick <b>${fp(i, 1)}</b>`, `Lote <b>${fq(i.lot)}</b>`];
     if (i.isOpt) meta.push(`Ativo-objeto <b>${i.underlying}</b>, strike <b>${fnum(i.strike, 2)}</b>`);
-    if (i.isFut) meta.push(`Rejeição sobre o ajuste <b>${fp(i, i.settleT)}</b>`);
+    if (i.isFut) meta.push(i.g.rejOnSettle ? `Rejeição sobre o ajuste <b>${fp(i, i.settleT)}</b>` : `Ajuste anterior <b>${fp(i, i.settleT)}</b>`);
     $('fhMeta').innerHTML = meta.map(m => `<span>${m}</span>`).join('');
   }
 }
@@ -251,9 +251,10 @@ function fillLimits(i) {
   if (i.state === ST.PRE) note = 'Fora do horário: os limites estão calculados sobre o fechamento anterior. ';
   if (t.ult.amp && !i.isDeriv) { const b = t.ult.c * i.tick; note += `<b>Amplitude mínima aplicada.</b> ${fnum(g.ult.pct * 100, 1)}% de ${fpr(i, t.ult.c)} daria só R$ ${fnum(b * g.ult.pct, 2)} por lado; em ações vale no mínimo R$ ${fnum(CONFIG.minAmplitudeStocks, 2)}. `; }
   if (i.isOpt && t.ult.sHi != null) { const u = E.by[i.underlying]; note += `Túnel assíncrono: o centro é o teórico Black-Scholes da opção; os limites saem de um choque de volatilidade sobre a máxima (${fnum(t.ult.sHi, u.dec)}) e a mínima (${fnum(t.ult.sLo, u.dec)}) de ${i.underlying} nos últimos ${CONFIG.option.windowSec} s. Quando ${i.underlying} salta, o túnel se desloca mesmo sem negócio na opção. `; }
-  if (g.stepped) note += `Futuros: o centro do túnel de leilão anda em degraus (a cada ${CONFIG.futuresCenter.everySec} s ou quando o preço percorre metade da meia-largura); último degrau às ${hms(i.fut.t)}. A rejeição usa o preço de ajuste. `;
+  if (g.stepped) note += `Futuros: o centro do túnel de leilão anda em degraus (a cada ${CONFIG.futuresCenter.everySec} s ou quando o preço percorre metade da meia-largura); último degrau às ${hms(i.fut.t)}. ${g.rejOnSettle ? 'A rejeição usa o preço de ajuste.' : 'A rejeição acompanha o preço-base direto, sem degraus.'} `;
+  if (g.priceBase === 'LTP') note += 'LTP (last trade price): vale o último preço negociado; antes do primeiro negócio do dia, o fechamento anterior. ';
   if (g.priceBase === 'CLAST') note += 'C-LAST: vale o último preço se estiver entre a melhor compra e a melhor venda; se a melhor compra estiver acima dele, vale ela; se a melhor venda estiver abaixo, vale ela. ';
-  if (g.priceBase === 'MOSTRECENT' && !g.stepped) note += `Most recent: vale o que foi atualizado por último entre o último negócio e o valor da carteira, recalculado a cada ${CONFIG.refPriceEverySec} s. `;
+  if (g.priceBase === 'MOSTRECENT') note += `Most recent: vale o que foi atualizado por último entre o último negócio e o preço de referência (${i.type === 'etf' ? 'o valor da carteira' : 'o meio entre a melhor compra e a melhor venda, quando o spread é curto'}), recalculado a cada ${CONFIG.refPriceEverySec} s. `;
   setHTML('limNote', note);
 }
 
@@ -573,7 +574,7 @@ function guideHTML() {
     <h3>Estados no mapa</h3>
     <p>Borda dourada com anel: em leilão, com o teórico no lugar do último preço. Selo +N: prorrogações (o anel recomeça a cada uma). Contorno tracejado: call. Cinza hachurado: parado pelo circuit breaker. Pulso vinho no canto: uma oferta acabou de ser rejeitada. O fundo é tingido pela variação do dia.</p>
     <h3>Classificação dos túneis</h3>
-    <p><b>Estático</b>: fixo no dia (túnel estático; rejeição dos derivativos, sobre o ajuste). <b>Dinâmico síncrono</b>: segue o preço do próprio ativo (último preço, preço médio). <b>Dinâmico assíncrono</b>: vem de outro ativo, como nas opções, cujo túnel deriva do teórico calculado a partir de PETR4.</p>
+    <p><b>Estático</b>: fixo no dia (túnel estático, sobre o fechamento anterior). <b>Dinâmico síncrono</b>: segue o preço-base do próprio ativo, que é o LTP (último preço negociado) nas ações e nos ETFs e o most recent nos futuros (rejeição, último preço, preço médio). <b>Dinâmico assíncrono</b>: vem de outro ativo, como nas opções, cujo túnel deriva do teórico calculado a partir de PETR4.</p>
     </div>
     <div>
     <h3>Limites e arredondamento</h3>

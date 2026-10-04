@@ -49,8 +49,11 @@ const CONFIG = {
 
   // ---------------- grupos de túneis (tabela 2.8) ----------------
   // pct = multiplicativo; abs = aditivo (R$, pontos ou p.p.)
+  // priceBase (centro dos túneis) conferido nos parâmetros publicados pela B3: mercado de ações de 18/03/2026
+  // (LTP para todo o mercado à vista, inclusive ETF) e futuros de 01/10/2026 e 14/09/2026 (Most Recent, também
+  // no túnel de rejeição). Opções: túneis pelo teórico, com choques de volatilidade.
   groups: {
-    IBOV:   { label: 'Ações Ibovespa/IBrX', priceBase: 'CLAST',
+    IBOV:   { label: 'Ações Ibovespa/IBrX', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.015 }, med: { pct: 0.02 }, est: { pct: 0.10 },
               protAuction: { pct: 0.015 }, protCall: { pct: 0.05 }, minAmp: true, auctionSec: 180 },
     OUTROS: { label: 'Ações de outros índices', priceBase: 'LTP',
@@ -59,16 +62,16 @@ const CONFIG = {
     SMALL:  { label: 'Demais ações (small caps)', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.085 }, med: { pct: 0.10 }, est: { pct: 0.10 },
               protAuction: { pct: 0.03 }, protCall: { pct: 0.15 }, minAmp: true, auctionSec: 180 },
-    ETF:    { label: 'ETF', priceBase: 'MOSTRECENT',
+    ETF:    { label: 'ETF', priceBase: 'LTP',
               rej: { pct: 0.20 }, ult: { pct: 0.04 }, med: { pct: 0.05 }, est: { pct: 0.10 },
               protAuction: { pct: 0.03 }, protCall: { pct: 0.05 }, minAmp: true, auctionSec: 180 },
-    WIN:    { label: 'Mini Ibovespa', priceBase: 'MOSTRECENT', rejOnSettle: true, stepped: true,
+    WIN:    { label: 'Mini Ibovespa', priceBase: 'MOSTRECENT', stepped: true,
               rej: { pct: 0.05 }, ult: { pct: 0.01 }, med: { pct: 0.01 }, est: null,
               protAuction: { pct: 0.01 }, protCall: { pct: 0.02 }, auctionSec: 60 },
-    WDO:    { label: 'Mini dólar', priceBase: 'MOSTRECENT', rejOnSettle: true, stepped: true,
+    WDO:    { label: 'Mini dólar', priceBase: 'MOSTRECENT', stepped: true,
               rej: { pct: 0.05 }, ult: { pct: 0.005 }, med: { pct: 0.005 }, est: null,
               protAuction: { pct: 0.005 }, protCall: { pct: 0.01 }, auctionSec: 60 },
-    DI1:    { label: 'DI de um dia', priceBase: 'LTP', rejOnSettle: true, stepped: true,
+    DI1:    { label: 'DI de um dia', priceBase: 'MOSTRECENT', stepped: true,
               rej: { abs: 1.00 }, ult: { abs: 0.10 }, med: { abs: 0.10 }, est: null,
               protAuction: { abs: 0.10 }, protCall: { abs: 0.20 }, auctionSec: 60 },
     OPC:    { label: 'Opções sobre ações', priceBase: 'TEORICO',

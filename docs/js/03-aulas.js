@@ -164,7 +164,7 @@ const LESSONS = [
     seed: 101, start: '10:16:00', focus: 'PETR4', quiet: ['PETR4'], gap: { tk: 'B3SA3', pct: 0.012 },
     steps: [
       { t: 'O tubo dourado', hl: ['chartWrap', 'reguaWrap'],
-        x: c => { const u = c.i.tun.ult, i = c.i; return `O tubo dourado é o ${LB('túnel de leilão por último preço')} de PETR4: ${pctSpec(i.g.ult)} em torno do preço-base (C-LAST), agora ${LB(fpr(i, u.c))}. Os limites, ${LB(fp(i, u.lo))} e ${LB(fp(i, u.hi))}, aparecem escritos na ponta do tubo.<br>Ele age no ${LB('momento do negócio')}: se o próximo negócio sairia fora do tubo, ele não acontece e o ativo entra em leilão. Na régua à direita, o tubo é o portão dourado.`; },
+        x: c => { const u = c.i.tun.ult, i = c.i; return `O tubo dourado é o ${LB('túnel de leilão por último preço')} de PETR4: ${pctSpec(i.g.ult)} em torno do preço-base (${i.g.priceBase === 'LTP' ? 'LTP, o último preço negociado' : baseMethodName(i)}), agora ${LB(fpr(i, u.c))}. Os limites, ${LB(fp(i, u.lo))} e ${LB(fp(i, u.hi))}, aparecem escritos na ponta do tubo.<br>Ele age no ${LB('momento do negócio')}: se o próximo negócio sairia fora do tubo, ele não acontece e o ativo entra em leilão. Na régua à direita, o tubo é o portão dourado.`; },
         btn: 'Mandar uma compra grande', go: c => { markTrades(c); c.E.doWhale(c.i, 1); }, run: RUN_AUC },
       { t: 'Por que entrou em leilão', hl: ['chartWrap', 'reguaWrap'],
         x: c => { const i = c.i, f = newTrades(c), q = f.reduce((s, x) => s + x.q, 0);
